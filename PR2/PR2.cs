@@ -5,13 +5,13 @@ using System.Text;
 using System.Threading.Tasks;
 using LibUtils;
 
-namespace PR1
+namespace PR2
 {
-    internal class PR1
+    internal class PR2
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("1. Hello World !!!");
+            Console.WriteLine("2. Hello World !!!");
             Utils.Test();
             Console.ReadKey();
         }
