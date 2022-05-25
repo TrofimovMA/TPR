@@ -43,7 +43,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="PR1.cs" />
+    <Compile Include="PR1_Major.cs" />
+    <Compile Include="PR1_Program.cs" />
+    <Compile Include="PR1_Rest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
