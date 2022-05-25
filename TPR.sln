@@ -9,6 +9,15 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PR2", "PR2\PR2.csproj", "{F
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LibUtils", "LibUtils\LibUtils.csproj", "{BB8B3821-C80B-4147-A898-4F11124D101A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dev", "Dev\Dev.csproj", "{9F1C4DEA-653D-468F-A062-4A4BE53B4399}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{6EC18A71-CF36-46B3-AB23-91DB60BFA0E5}"
+	ProjectSection(SolutionItems) = preProject
+		Other\PR.bat = Other\PR.bat
+		Other\PR1.bat = Other\PR1.bat
+		Other\PR1_s.txt = Other\PR1_s.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +36,10 @@ Global
 		{BB8B3821-C80B-4147-A898-4F11124D101A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BB8B3821-C80B-4147-A898-4F11124D101A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BB8B3821-C80B-4147-A898-4F11124D101A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9F1C4DEA-653D-468F-A062-4A4BE53B4399}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9F1C4DEA-653D-468F-A062-4A4BE53B4399}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9F1C4DEA-653D-468F-A062-4A4BE53B4399}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9F1C4DEA-653D-468F-A062-4A4BE53B4399}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

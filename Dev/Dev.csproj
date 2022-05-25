@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{6E097263-D0A4-487A-B0B7-EC63BC2C3C64}</ProjectGuid>
+    <ProjectGuid>{9F1C4DEA-653D-468F-A062-4A4BE53B4399}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>PR1</RootNamespace>
-    <AssemblyName>PR1</AssemblyName>
+    <RootNamespace>Dev</RootNamespace>
+    <AssemblyName>Dev</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -43,7 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="PR1.cs" />
+    <Compile Include="Dev.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -54,11 +54,6 @@
       <Project>{bb8b3821-c80b-4147-a898-4f11124d101a}</Project>
       <Name>LibUtils</Name>
     </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="PR1.txt">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
