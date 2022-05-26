@@ -4,17 +4,9 @@
     Практическая Работа #1. Метод Парето
  */
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.IO;
-using System.Text.RegularExpressions;
-using System.Globalization;
-using LibUtils;
-
-using Table = LibUtils.Utils.Table;
+using Library;
 
 namespace PR1
 {
@@ -44,11 +36,10 @@ namespace PR1
             public string name = "A"; // Имя Альтернативы
             public List<float> values = new List<float>(); // Значения Альтернативы
 
-            public A(string name, List<string> pars)
+            public A(string name, List<float> pars)
             {
                 this.name = name;
-                foreach (string c in pars)
-                    values.Add(float.Parse(c, NumberStyles.Any, CultureInfo.InvariantCulture));
+                this.values = new List<float>(pars);
             }
 
             public override string ToString()

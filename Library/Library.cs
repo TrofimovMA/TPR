@@ -4,9 +4,9 @@ using System.Globalization;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace LibUtils
+namespace Library
 {
-    public static class Utils
+    public static class Lib
     {
         // Проверка
         public static void Test()
@@ -216,7 +216,7 @@ namespace LibUtils
         {
             return array.Select(x => x.Length).Max();
         }
-        public static float InterParse(this string a)
+        public static float InterParseFloat(this string a)
         {
             return float.Parse(a, NumberStyles.Any, CultureInfo.InvariantCulture);
         }

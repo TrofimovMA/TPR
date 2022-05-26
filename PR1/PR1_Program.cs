@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 using System.Text.RegularExpressions;
-using System.Globalization;
-using LibUtils;
+using Library;
 
-using Table = LibUtils.Utils.Table;
+using Table = Library.Lib.Table;
 
 namespace PR1
 {
@@ -28,8 +25,136 @@ namespace PR1
         static List<A> CurAs = new List<A>(); // Текущий cписок Альтернатив
         static List<A> NewAs = new List<A>(); // Новый cписок Альтернатив
 
+        // Команды Программы, которые могут быть в Инструкции
+        enum Command
+        {
+            CMD_IN,
+            CMD_PARETO,
+            CMD_NAR_BOUNDS,
+            CMD_NAR_SUBOPTIMIZATION,
+            CMD_NAR_LEXICOGRAPHICAL,
+            CMD_CHANGES,
+            CMD_OUT_FULL,
+            CMD_OUT
+        }
+
+        // Загрузка Входных Данных
+        static void LoadInputData()
+        {
+            // Входные Данные
+            string inputStr = File.ReadAllText(inputFile);
+
+            // Обработка Входных Данных
+            Regex regex; Match match; string str;
+            // - Обработка комментариев
+            regex = new Regex(@"^(.*?)(\/\/.*)$", RegexOptions.Multiline);
+            inputStr = regex.Replace(inputStr, "$1");
+            // - Обработка Альтернатив и Критериев
+            regex = new Regex(@"(?<type>K|A)\(((\s*)|(\s*((""(?<name>.*?)"")|(?<name>.*?))\s*(,\s*(?<pars>.*?)\s*)*))\)");
+            foreach (Match m in regex.Matches(inputStr))
+            {
+                string name = m.Groups["name"].Value;
+                List<string> pars = new List<string>();
+                pars.AddRange(m.Groups["pars"].Captures.Cast<Capture>().Select(x => x.Value));
+                switch (m.Groups["type"].Value)
+                {
+                    case "K":
+                        Ks.Add(new K(name, (pars.ElementAtOrDefault(0) ?? "NULL") != "-"));
+                        break;
+                    case "A":
+                        List<float> floatPars = pars.Select(x => x.InterParseFloat()).ToList();
+                        As.Add(new A(name, floatPars));
+
+                        break;
+                }
+            }
+            // - Обработка параметров "Указание Границ Критериев"
+            str = @"\(\s*(?<k>\d+?)\s*,\s*(?<bound>\S+)\s*\)";
+            regex = new Regex($@"N_BOUNDS\(\s*{str}(\s*,\s*{str}\s*)*\s*\)");
+            foreach (Match m in regex.Matches(inputStr))
+            {
+                for (int i = 0; i < m.Groups["k"].Captures.Count; i++)
+                {
+                    N_Bounds.Add((
+                        int.Parse(m.Groups["k"].Captures[i].Value) - 1,
+                        m.Groups["bound"].Captures[i].Value.InterParseFloat()));
+                }
+            }
+            // - Обработка параметров "Субоптимизация"
+            str = @"(?<k>\S+?)";
+            regex = new Regex($@"N_SUBOPTIMIZATION\(\s*{str}\s*(\s*(,\s*{str}\s*))*\)");
+            match = regex.Match(inputStr);
+            for (int i = 0; i < match.Groups["k"].Captures.Count; i++)
+            {
+                if (match.Groups["k"].Captures[i].Value.ToUpper() == "X")
+                    N_Suboptimization.Add(('X', 0f));
+                else if (match.Groups["k"].Captures[i].Value.ToUpper() == "N")
+                    N_Suboptimization.Add(('N', 0f));
+                else
+                    N_Suboptimization.Add(('\0', match.Groups["k"].Captures[i].Value.InterParseFloat()));
+            }
+            // - Обработка параметров "Лексикографическая Оптимизация"
+            str = @"(?<k>\d+?)";
+            regex = new Regex($@"N_LEXICOGRAPHICAL\(\s*{str}\s*(\s*(,\s*{str}\s*))*\)");
+            match = regex.Match(inputStr);
+            for (int i = 0; i < match.Groups["k"].Captures.Count; i++)
+                N_Lexicographical.Add(int.Parse(match.Groups["k"].Captures[i].Value));
+            // - Обработка Списка Команд
+            regex = new Regex(@"S(\s*->\s*(?<cmd>\w+))+");
+            match = regex.Match(inputStr);
+            if (match.Success)
+            {
+                foreach (Capture c in match.Groups["cmd"].Captures)
+                {
+                    switch (c.Value)
+                    {
+                        case "IN":
+                            Commands.Add(Command.CMD_IN);
+                            break;
+                        case "PARETO":
+                            Commands.Add(Command.CMD_PARETO);
+                            break;
+                        case "N_BOUNDS":
+                            Commands.Add(Command.CMD_NAR_BOUNDS);
+                            break;
+                        case "N_SUBOPTIMIZATION":
+                            Commands.Add(Command.CMD_NAR_SUBOPTIMIZATION);
+                            break;
+                        case "N_LEXICOGRAPHICAL":
+                            Commands.Add(Command.CMD_NAR_LEXICOGRAPHICAL);
+                            break;
+                        case "CHANGES":
+                            Commands.Add(Command.CMD_CHANGES);
+                            break;
+                        case "OUT":
+                            Commands.Add(Command.CMD_OUT);
+                            break;
+                        case "OUT_FULL":
+                            Commands.Add(Command.CMD_OUT_FULL);
+                            break;
+                    }
+                }
+            }
+
+            // Частичное исправление некорректных Входных Данных
+            if (Commands.Count < 1)
+                Commands.Add(Command.CMD_IN);
+            foreach (A a in As)
+            {
+                if (a.values.Count() > Ks.Count)
+                    a.values = a.values.GetRange(0, Ks.Count);
+                if (a.values.Count() < Ks.Count)
+                {
+                    a.values.AddRange(new float[Ks.Count - a.values.Count]);
+                }
+            }
+
+            CurAs = new List<A>(As);
+            NewAs = new List<A>(As);
+        }
+
         // Таблица - информация об Альтернативах и Критериях
-        static void ShowTable(List<A> As, List<K> Ks)
+        static void ShowTableAK(List<A> As, List<K> Ks)
         {
             // Создание таблицы
             Table t = new Table(As.Count + 1, Ks.Count + 2);
@@ -75,136 +200,60 @@ namespace PR1
             t.PrintTable();
         }
 
-        // Команды Программы, которые могут быть в Инструкции
-        enum Command
+        // Таблица - информация об Отношениях Парето-Доминирования
+        static void ShowTableR(int[,] infoRelations)
         {
-            CMD_IN,
-            CMD_PARETO,
-            CMD_NAR_BOUNDS,
-            CMD_NAR_SUBOPTIMIZATION,
-            CMD_NAR_LEXICOGRAPHICAL,
-            CMD_CHANGES,
-            CMD_OUT_FULL,
-            CMD_OUT
-        }
-        // Главная Программа
-        // ( Чтение входных данных и последовательное выполнение заданных в Инструкции команд )
-        static void Main()
-        {
-            CultureInfo culture = (CultureInfo)CultureInfo.CurrentCulture.Clone();
-            culture.NumberFormat.NumberDecimalSeparator = ".";
-            CultureInfo.DefaultThreadCurrentCulture = culture;
+            // Создание таблицы
+            Table t = new Table(As.Count + 1, As.Count + 1);
 
-            // Входные Данные
-            string inputStr = File.ReadAllText(inputFile);
-
-            // Обработка Входных Данных
-            Regex regex;
-            Match match; string str;
-            // - Обработка комментариев
-            regex = new Regex(@"^(.*?)(\/\/.*)$", RegexOptions.Multiline);
-            inputStr = regex.Replace(inputStr, "$1");
-            // - Обработка Альтернатив и Критериев
-            regex = new Regex(@"(?<type>K|A)\(((\s*)|(\s*((""(?<name>.*?)"")|(?<name>.*?))\s*(,\s*(?<pars>.*?)\s*)*))\)");
-            foreach (Match m in regex.Matches(inputStr))
-            {
-                string name = m.Groups["name"].Value;
-                List<string> pars = new List<string>();
-                pars.AddRange(m.Groups["pars"].Captures.Cast<Capture>().Select(x => x.Value));
-                switch (m.Groups["type"].Value)
+            // Заполнение таблицы
+            t.table[0, 0] = "№/№";
+            for (int i = 1; i <= As.Count; i++)
+                t.table[0, i] = i.ToString();
+            for (int j = 1; j <= As.Count; j++)
+                t.table[j, 0] = j.ToString();
+            for (int i = 1; i <= As.Count; i++)
+                for (int j = 1; j <= As.Count; j++)
                 {
-                    case "K":
-                        Ks.Add(new K(name, (pars.ElementAtOrDefault(0) ?? "NULL") != "-"));
-                        break;
-                    case "A":
-                        As.Add(new A(name, pars));
-                        break;
-                }
-            }
-            // - Обработка параметров "Указание Границ Критериев"
-            str = @"\(\s*(?<k>\d+?)\s*,\s*(?<bound>\S+)\s*\)";
-            regex = new Regex($@"N_BOUNDS\(\s*{str}(\s*,\s*{str}\s*)*\s*\)");
-            foreach (Match m in regex.Matches(inputStr))
-            {
-                for (int i = 0; i < m.Groups["k"].Captures.Count; i++)
-                {
-                    N_Bounds.Add((
-                        int.Parse(m.Groups["k"].Captures[i].Value) - 1,
-                        m.Groups["bound"].Captures[i].Value.InterParse()));
-                }
-            }
-            // - Обработка параметров "Субоптимизация"
-            str = @"(?<k>\S+?)";
-            regex = new Regex($@"N_SUBOPTIMIZATION\(\s*{str}\s*(\s*(,\s*{str}\s*))*\)");
-            match = regex.Match(inputStr);
-            for (int i = 0; i < match.Groups["k"].Captures.Count; i++)
-            {
-                if (match.Groups["k"].Captures[i].Value.ToUpper() == "X")
-                    N_Suboptimization.Add(('X', 0f));
-                else if (match.Groups["k"].Captures[i].Value.ToUpper() == "N")
-                    N_Suboptimization.Add(('N', 0f));
-                else
-                    N_Suboptimization.Add(('\0', match.Groups["k"].Captures[i].Value.InterParse()));
-            }
-            // - Обработка параметров "Лексикографическая Оптимизация"
-            str = @"(?<k>\d+?)";
-            regex = new Regex($@"N_LEXICOGRAPHICAL\(\s*{str}\s*(\s*(,\s*{str}\s*))*\)");
-            match = regex.Match(inputStr);
-            for (int i = 0; i < match.Groups["k"].Captures.Count; i++)
-                N_Lexicographical.Add(int.Parse(match.Groups["k"].Captures[i].Value));
-            // - Обработка Списка Команд
-            regex = new Regex(@"S(\s*->\s*(?<cmd>\w+))+");
-            match = regex.Match(inputStr);
-            if (match.Success)
-            {
-                foreach (Capture c in match.Groups["cmd"].Captures)
-                {
-                    switch (c.Value)
+                    if (i <= j)
                     {
-                        case "IN":
-                            Commands.Add(Command.CMD_IN);
+                        t.table[i, j] = "-";
+                        continue;
+                    }
+
+                    // Информация об отношениях Парето-Доминирования
+                    // между объектами A (с индекстом i-1) и B (с индексом j-1).
+                    switch (infoRelations[i - 1, j - 1])
+                    {
+                        case 1: // Объект A доминирующий
+                            t.table[i, j] = i.ToString();
                             break;
-                        case "PARETO":
-                            Commands.Add(Command.CMD_PARETO);
+                        case -1: // Объект A доминируемый
+                            t.table[i, j] = j.ToString();
                             break;
-                        case "N_BOUNDS":
-                            Commands.Add(Command.CMD_NAR_BOUNDS);
-                            break;
-                        case "N_SUBOPTIMIZATION":
-                            Commands.Add(Command.CMD_NAR_SUBOPTIMIZATION);
-                            break;
-                        case "N_LEXICOGRAPHICAL":
-                            Commands.Add(Command.CMD_NAR_LEXICOGRAPHICAL);
-                            break;
-                        case "CHANGES":
-                            Commands.Add(Command.CMD_CHANGES);
-                            break;
-                        case "OUT":
-                            Commands.Add(Command.CMD_OUT);
-                            break;
-                        case "OUT_FULL":
-                            Commands.Add(Command.CMD_OUT_FULL);
+                        default: // Объекты A и B несравнимые
+                            t.table[i, j] = "н";
                             break;
                     }
                 }
-            }
-            if (Commands.Count < 1)
-                Commands.Add(Command.CMD_IN);
-            CurAs = new List<A>(As);
-            NewAs = new List<A>(As);
 
-            // Частичное исправление некорректных Входных Данных
-            foreach (A a in As)
-            {
-                if (a.values.Count() > Ks.Count)
-                    a.values = a.values.GetRange(0, Ks.Count);
-                if (a.values.Count() < Ks.Count)
-                {
-                    a.values.AddRange(new float[Ks.Count - a.values.Count]);
-                }
-            }
+            // Оформление таблицы остается по умолчанию
 
-            // Результат Программы = Выходные Данные =
+            // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
+            t.UpdateInfo();
+
+            // Вывод таблицы
+            t.PrintTable();
+        }
+
+        // Главная Программа
+        // ( Чтение входных данных и последовательное выполнение заданных в Инструкции команд )
+        static void MainProgram()
+        {
+            // Загрузка Входных Данных
+            LoadInputData();
+
+            // Выполнение Инструкции = Результат Программы = Выходные Данные
             int cmdCount = 0;
             foreach (Command c in Commands)
             {
@@ -214,63 +263,26 @@ namespace PR1
                     // Входные Данные
                     case Command.CMD_IN:
                         Console.WriteLine("ВХОДНЫЕ ДАННЫЕ");
-                        ShowTable(As, Ks);
+                        ShowTableAK(As, Ks);
+                        Console.WriteLine("Исходное множество решений: {{ {0} }}", 
+                            String.Join(", ", As.Select(x => "A" + (As.IndexOf(x) + 1))));
+                        CurAs = new List<A>(As);
+                        NewAs = new List<A>(As);
                         Console.WriteLine();
                         break;
                     // Метод Парето
                     case Command.CMD_PARETO:
                         Console.WriteLine("МЕТОД ПАРЕТО");
                         Console.WriteLine("Отношения Парето-доминирования:");
-
                         int[,] infoRelations; // Информация об отношениях
                         NewAs = Pareto(CurAs, Ks, out infoRelations); // Новый список альтернатив
-
-                        // Создание таблицы
-                        Table r = new Table(As.Count + 1, As.Count + 1);
-
-                        // Заполнение таблицы
-                        r.table[0, 0] = "№/№";
-                        for (int i = 1; i <= As.Count; i++)
-                            r.table[0, i] = i.ToString();
-                        for (int j = 1; j <= As.Count; j++)
-                            r.table[j, 0] = j.ToString();
-                        for (int i = 1; i <= As.Count; i++)
-                            for (int j = 1; j <= As.Count; j++)
-                            {
-                                if (i <= j)
-                                {
-                                    r.table[i, j] = "-";
-                                    continue;
-                                }
-
-                                // Информация об отношениях Парето-Доминирования
-                                // между объектами A (с индекстом i-1) и B (с индексом j-1).
-                                switch (infoRelations[i - 1, j - 1])
-                                {
-                                    case 1: // Объект A доминирующий
-                                        r.table[i, j] = i.ToString();
-                                        break;
-                                    case -1: // Объект A доминируемый
-                                        r.table[i, j] = j.ToString();
-                                        break;
-                                    default: // Объекты A и B несравнимые
-                                        r.table[i, j] = "н";
-                                        break;
-                                }
-                            }
-
-                        // Оформление таблицы остается по умолчанию
-
-                        // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
-                        r.UpdateInfo();
-
-                        // Вывод таблицы
-                        r.PrintTable();
-
+                        ShowTableR(infoRelations);
                         Console.WriteLine("Исключенные доминируемые альтернативы: {0}", String.Join("; ", GetChanges(CurAs, NewAs)
                             .Where(x => x.c == '-').Select(x => x.a).Select(x => "-A" + (As.IndexOf(x) + 1))
                             ));
                         CurAs = new List<A>(NewAs);
+                        Console.WriteLine("Полученное множество решений: {{ {0} }}",
+                            String.Join(", ", CurAs.Select(x => "A" + (As.IndexOf(x) + 1))));
                         Console.WriteLine();
                         break;
                     // Указание Границ Критериев
@@ -284,6 +296,8 @@ namespace PR1
                             .Where(x => x.c == '-').Select(x => x.a).Select(x => "-A" + (As.IndexOf(x) + 1))
                             ));
                         CurAs = new List<A>(NewAs);
+                        Console.WriteLine("Полученное множество решений: {{ {0} }}",
+                            String.Join(", ", CurAs.Select(x => "A" + (As.IndexOf(x) + 1))));
                         Console.WriteLine();
                         break;
                     // Субоптимизация
@@ -297,7 +311,7 @@ namespace PR1
                             }
                             ))());
                         Console.WriteLine("Границы остальных критериев: {0}",
-                            String.Join("; ", N_Suboptimization
+                            String.Join(" ; ", N_Suboptimization
                                 .Select((x, i) => (knum: i + 1, kinfo: x)).Where(x => x.kinfo.flag == '\0')
                                 .Select(x => "K" + x.knum + (Ks[x.knum - 1].positive ? " >= " : " <= ") + x.kinfo.bound)
                             )
@@ -307,6 +321,8 @@ namespace PR1
                             .Where(x => x.c == '-').Select(x => x.a).Select(x => "-A" + (As.IndexOf(x) + 1))
                             ));
                         CurAs = new List<A>(NewAs);
+                        Console.WriteLine("Полученное множество решений: {{ {0} }}",
+                            String.Join(", ", CurAs.Select(x => "A" + (As.IndexOf(x) + 1))));
                         Console.WriteLine();
                         break;
                     // Лексикографическая Оптимизация
@@ -319,6 +335,8 @@ namespace PR1
                             .Where(x => x.c == '-').Select(x => x.a).Select(x => "-A" + (As.IndexOf(x) + 1))
                             ));
                         CurAs = new List<A>(NewAs);
+                        Console.WriteLine("Полученное множество решений: {{ {0} }}",
+                            String.Join(", ", CurAs.Select(x => "A" + (As.IndexOf(x) + 1))));
                         Console.WriteLine();
                         break;
                     // Полученное Множество Решений
@@ -329,8 +347,8 @@ namespace PR1
                         break;
                     case Command.CMD_OUT_FULL:
                         // Итоговое Множество Решений (подробно)
-                        Console.WriteLine($"ИТОГОВОЕ МНОЖЕСТВО РЕШЕНИЙ (ПОДРОБНО).");
-                        ShowTable(NewAs, Ks);
+                        Console.WriteLine($"ИТОГОВОЕ МНОЖЕСТВО РЕШЕНИЙ (ПОДРОБНО)");
+                        ShowTableAK(NewAs, Ks);
                         Console.WriteLine();
                         break;
                     case Command.CMD_OUT:
@@ -341,9 +359,6 @@ namespace PR1
                         break;
                 }
             }
-
-            // Не закрывать окно консоли автоматически по завершении Программы
-            Console.ReadKey();
         }
     }
 }

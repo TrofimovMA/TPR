@@ -36,4 +36,4 @@ N_LEXICOGRAPHICAL(2, 1, 6, 4, 5, 3)
 // [ K2 > K1 > K6 > K4 > K5 > K3 ]
 
 // Программа (порядок выполнения команд программы)
-S -> IN -> PARETO -> CHANGES -> N_BOUNDS -> CHANGES -> N_SUBOPTIMIZATION -> CHANGES -> N_LEXICOGRAPHICAL -> OUT
+S -> IN -> PARETO -> N_BOUNDS -> N_SUBOPTIMIZATION -> N_LEXICOGRAPHICAL -> OUT
