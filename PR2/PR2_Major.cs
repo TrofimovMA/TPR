@@ -131,7 +131,15 @@ namespace PR2
                 maxWay[i - 1] = getMaxWay(graph, new List<int>() { i });
                 Console.WriteLine(maxWay[i - 1]);
             }
-
+            Dictionary<int, int> map = new Dictionary<int, int>();
+            for (int i = 0; i < As.Count; i++)
+                map[i] = maxWay[i];
+            maxWay = maxWay.ToList().Distinct().OrderByDescending(x => x).ToArray();
+            Console.WriteLine("Уровни графа:");
+            for(int i=0; i < maxWay.Length; i++)
+            {
+                Console.WriteLine("Уровень {0} : {1}", i + 1, String.Join(", ", map.Where(x => x.Value == maxWay[i]).Select(x => x.Key+1)));
+            }
 
             // Получено ли решение?
             return isSolutionReady;
