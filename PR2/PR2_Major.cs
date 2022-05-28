@@ -18,23 +18,25 @@ namespace PR2
         {
             public string name = "K"; // Имя Критерия
             public bool positive = true; // Стремление Критерия
-            public int weigtht = 1; // Вес Критерия
+            public int weight = 1; // Вес Критерия
             public ScaleMark[] scale =
                 new ScaleMark[3] { ("A", 1), ("B", 2), ("C", 3) }; // Шкала Критерия
 
-            public K(string name, bool positive, ScaleMark[] scale)
+            public K(string name, ScaleMark[] scale, int weight, bool positive)
             {
                 this.name = name;
-                this.positive = positive;
                 this.scale = scale;
+                this.weight = weight;
+                this.positive = positive;
             }
 
             public override string ToString()
             {
-                return string.Format("K(\"{0}\", {1}, {2})",
+                return string.Format("K(\"{0}\", {1}, {2}, {3})",
                     name,
-                    positive ? "+" : "-",
-                    "[" + String.Join(", ", scale.Select(x => x.ToString())) + "]");
+                    "[" + String.Join("| ", scale.Select(x => x.ToString())) + "]",
+                    weight,
+                    positive ? "+" : "-");
             }
         }
 
@@ -42,12 +44,12 @@ namespace PR2
         class A
         {
             public string name = "A"; // Имя Альтернативы
-            public List<float> values = new List<float>(); // Оценки Альтернативы
+            public List<int> values = new List<int>(); // Оценки Альтернативы
 
-            public A(string name, List<float> pars)
+            public A(string name, List<int> pars)
             {
                 this.name = name;
-                this.values = new List<float>(pars);
+                this.values = new List<int>(pars);
             }
 
             public override string ToString()
@@ -56,36 +58,137 @@ namespace PR2
             }
         }
 
-        // Метод Парето
+        // Метод ЭЛЕКТРА
         // - Главная Функция
-        // ( Нахождение Множества Парето-Оптимальных Решений )
-        static List<A> Pareto(List<A> As, List<K> Ks, out int[,] infoRelations)
+        // ( Составление матрицы предпочтений проектов )
+        static bool Elektra(List<A> As, List<K> Ks, out string[,] infoPreferences, out string graphVizStr, float threshold = 1f)
         {
-            // Требуемое Множество Парето-Оптимальных Решений
-            List<A> NewAs = new List<A>(As);
+            bool isSolutionReady = true;
 
-            // Нахождение Множества Парето-Оптимальных Решений
-            infoRelations = new int[As.Count, As.Count];
+            infoPreferences = new string[As.Count, As.Count];
             for (int i = 0; i < As.Count; i++)
                 for (int j = 0; j < As.Count; j++)
                 {
-                    // Отношение Парето-Доминирования
-                    A a = As[i]; // Объект A (с индексом i)
-                    A b = As[j]; // Объект B (с индексом j)
-
-                    // Заполнение таблицы Отношений Парето-Доминирования
-                    infoRelations[i, j] = Pareto_Compare(a, b, Ks);
-                    // Результат =  1: Объект A - Доминирующий, объект B - Доминируемый
-                    // Результат = -1: Объект A - Доминируемый, объект B - Доминирующий
-                    // Результат =  0: Объекты A и B несравнимые
-
-                    // Если Объект A является Доминируемым, то исключаем его из выбора.
-                    if (infoRelations[i, j] == -1)
-                        NewAs.Remove(a);
+                    int P = 0, N = 0; float D; string r;
+                    for (int k = 0; k < Ks.Count; k++)
+                        if ((As[i].values[k] > As[j].values[k] && Ks[k].positive) || (As[i].values[k] < As[j].values[k] && !Ks[k].positive))
+                        { P += Ks[k].weight; N += 0; }
+                        else if ((As[i].values[k] < As[j].values[k] && Ks[k].positive) || (As[i].values[k] > As[j].values[k] && !Ks[k].positive))
+                        { P += 0; N += Ks[k].weight; }
+                        else { P += 0; N += 0; };
+                    if (i == j)
+                        r = "x";
+                    else if (N == 0)
+                        r = (P == 0) ? "-" : "inf";
+                    else
+                    {
+                        D = P * 1f / N;
+                        r = (D <= threshold) ? "-" : Math.Round(D, 1).ToString();
+                    }
+                    infoPreferences[i, j] = r;
                 }
 
-            // Полученное Множество Парето-Оптимальных Решений
-            return NewAs;
+            // Получение графа
+            List<(int, int)> graph = new List<(int, int)>();
+            for (int i = 0; i < infoPreferences.GetLength(0); i++)
+                for (int j = 0; j < infoPreferences.GetLength(1); j++)
+                    if (infoPreferences[i, j] != "-" && infoPreferences[i, j] != "x") graph.Add((i + 1, j + 1));
+
+            // Формирование кода GraphViz
+            graphVizStr = "";
+            graphVizStr += "digraph D {\r\n";
+            foreach ((int, int) ii in graph)
+                graphVizStr += "  \"" + ii.Item1 + "\" -> \"" + ii.Item2 + "\";\r\n";
+            graphVizStr += "}\r\n";
+            Console.Write($"GraphViz Сode:\r\n\r\n{graphVizStr}");
+
+            // Проверка на целостность графа
+            List<(int, int)> graphExt = new List<(int, int)> (graph);
+            for (int i = 0; i < graph.Count(); i++)
+                graphExt.Add((graph[i].Item2, graph[i].Item1));
+            bool canAchieveAll = true;
+            for (int i = 1; i <= As.Count; i++)
+                for (int j = 1; j <= As.Count; j++)
+                {
+                    if (i == j)
+                        continue;
+
+                    Console.WriteLine(i + " / " + j + " / " + nodeSearch(graphExt, new List<int>() { i }, j));
+                    canAchieveAll &= nodeSearch(graphExt, new List<int>() { i }, j);
+                }
+            Console.WriteLine(canAchieveAll);
+
+            // Проверка на петли
+            bool loopDetected = false;
+            for (int i = 1; i <= As.Count; i++)
+                loopDetected |= loopSearch(graph, new List<int>() { i });
+            Console.WriteLine(loopDetected);
+
+            // Уровни графа
+            int[] maxWay = new int[As.Count];
+            for (int i = 1; i <= As.Count; i++)
+            {
+                maxWay[i - 1] = getMaxWay(graph, new List<int>() { i });
+                Console.WriteLine(maxWay[i - 1]);
+            }
+
+
+            // Получено ли решение?
+            return isSolutionReady;
+        }
+
+        static int getMaxWay(List<(int, int)> graph, List<int> way)
+        {
+            int cur = way.Last();
+            int length = way.Count() - 1;
+            List<int> nexts = graph.Where(x => x.Item1 == cur).Select(x => x.Item2).ToList();
+            foreach (var x in nexts)
+            {
+                if (way.Contains(x))
+                    return length;
+
+                List<int> newWay = new List<int>(way);
+                newWay.Add(x);
+                length = Math.Max(length, getMaxWay(graph, newWay));
+            }
+            return length;
+        }
+
+        static bool loopSearch(List<(int, int)> graph, List<int> way)
+        {
+            int cur = way.Last();
+            bool answer = false;
+            List<int> nexts = graph.Where(x => x.Item1 == cur).Select(x => x.Item2).ToList();
+            foreach (var x in nexts)
+            {
+                if (way.Contains(x))
+                    return true;
+
+                List<int> newWay = new List<int>(way);
+                newWay.Add(x);
+                answer |= loopSearch(graph, newWay);
+            }
+            return answer;
+        }
+
+        static bool nodeSearch(List<(int, int)> graph, List<int> way, int dest)
+        {
+            int cur = way.Last();
+            bool answer = false;
+            List<int> nexts = graph.Where(x => x.Item1 == cur).Select(x => x.Item2).ToList();
+            foreach (var x in nexts)
+            {
+                if (way.Contains(x))
+                    continue;
+
+                if (x == dest)
+                    return true;
+
+                List<int> newWay = new List<int>(way);
+                newWay.Add(x);
+                answer |= nodeSearch(graph, newWay, dest);
+            }
+            return answer;
         }
 
         // Метод Парето

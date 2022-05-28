@@ -29,6 +29,7 @@ namespace PR2
         enum Command
         {
             CMD_IN,
+            CMD_IN_K,
             CMD_PARETO,
             CMD_NAR_BOUNDS,
             CMD_NAR_SUBOPTIMIZATION,
@@ -46,11 +47,13 @@ namespace PR2
 
             // Обработка Входных Данных
             Regex regex; Match match; string str;
+            Dictionary<string, ScaleMark[]> scales = new Dictionary<string, ScaleMark[]>();
+            List<(string name, string scale, string weight, string positive)> KsTemp = new List<(string, string, string, string)>();
             // - Обработка комментариев
             regex = new Regex(@"^(.*?)(\/\/.*)$", RegexOptions.Multiline);
             inputStr = regex.Replace(inputStr, "$1");
-            // - Обработка Альтернатив и Критериев
-            regex = new Regex(@"(?<type>K|A)\(((\s*)|(\s*((""(?<name>.*?)"")|(?<name>.*?))\s*(,\s*(?<pars>.*?)\s*)*))\)");
+            // - Обработка Альтернатив, Критериев и Шкал Критериев
+            regex = new Regex(@"(?<type>K|A|S)\(((\s*)|(\s*((""(?<name>.*?)"")|(?<name>.*?))\s*(,\s*(?<pars>.*?)\s*)*))\)");
             foreach (Match m in regex.Matches(inputStr))
             {
                 string name = m.Groups["name"].Value;
@@ -59,14 +62,26 @@ namespace PR2
                 switch (m.Groups["type"].Value)
                 {
                     case "K":
-                        Ks.Add(new K(name, (pars.ElementAtOrDefault(0) ?? "NULL") != "-", new ScaleMark[3]));
+                        KsTemp.Add((name, pars[0].DelQuotes(), pars[1], pars[2]));
                         break;
                     case "A":
-                        List<float> floatPars = pars.Select(x => x.InterParseFloat()).ToList();
-                        As.Add(new A(name, floatPars));
-
+                        List<int> intPars = pars.Select(x => int.Parse(x)).ToList();
+                        As.Add(new A(name, intPars));
+                        break;
+                    case "S":
+                        ScaleMark[] sm = new ScaleMark[pars.Count() / 2];
+                        for (int i = 0; i < sm.Length; i++)
+                        {
+                            sm[i].Name = pars[i * 2].DelQuotes();
+                            sm[i].Code = int.Parse(pars[1 + i * 2]);
+                        }
+                        scales.Add(name, sm);
                         break;
                 }
+            }
+            foreach ((string name, string scale, string weight, string positive) in KsTemp)
+            {
+                Ks.Add(new K(name, scales[scale], int.Parse(weight), positive != "-"));
             }
             // - Обработка параметров "Указание Границ Критериев"
             str = @"\(\s*(?<k>\d+?)\s*,\s*(?<bound>\S+)\s*\)";
@@ -111,6 +126,9 @@ namespace PR2
                         case "IN":
                             Commands.Add(Command.CMD_IN);
                             break;
+                        case "IN_K":
+                            Commands.Add(Command.CMD_IN_K);
+                            break;
                         case "PARETO":
                             Commands.Add(Command.CMD_PARETO);
                             break;
@@ -145,7 +163,7 @@ namespace PR2
                     a.values = a.values.GetRange(0, Ks.Count);
                 if (a.values.Count() < Ks.Count)
                 {
-                    a.values.AddRange(new float[Ks.Count - a.values.Count]);
+                    a.values.AddRange(new int[Ks.Count - a.values.Count]);
                 }
             }
 
@@ -153,7 +171,57 @@ namespace PR2
             NewAs = new List<A>(As);
         }
 
-        // Таблица - информация об Альтернативах и Критериях
+        // Таблица - информация о Критериях
+        static void ShowTableK(List<K> Ks)
+        {
+            // Создание таблицы
+            Table t = new Table(Ks.Count + 1, 5);
+
+            // Заполнение таблицы
+            int row, col;
+            string str = string.Empty;
+            row = 0; col = 0;
+            t.table[row, col++] = "Имя";
+            t.table[row, col++] = "Шкала";
+            t.table[row, col++] = "Код";
+            t.table[row, col++] = "Вес";
+            t.table[row, col++] = "Стремление";
+            for (int i = 0; i < Ks.Count; i++)
+            {
+                row++; col = 0;
+                t.table[row, col++] = Ks[i].name.ToMultiline();
+                t.table[row, col++] = String.Join("\n", Ks[i].scale.Select(x => x.Name));
+                t.table[row, col++] = String.Join("\n", Ks[i].scale.Select(x => x.Code));
+                t.table[row, col++] = Ks[i].weight.ToString();
+                t.table[row, col++] = Ks[i].positive ? "Max" : "Min";
+            }
+
+            // Оформление таблицы
+            for (int j = 0; j < t.GetY(); j++)
+                t.style[0, j] = "1C1";
+            for (int i = 1; i < t.GetX(); i++)
+            {
+                t.style[i, 0] = "1L1";
+                t.style[i, 1] = "0L0";
+                for (int j = 2; j < t.GetY(); j++)
+                    t.style[i, j] = "0R0";
+            }
+            t.lineSeparators = Enumerable.Range(0, t.GetX()).ToArray();
+
+            // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
+            t.UpdateInfo();
+
+            // Вывод таблицы
+            Console.WriteLine(t.GetTableLineSeparator(Enumerable.Range(0, t.GetY()).ToList().Where(x => !((x == t.GetY() - 1))).ToArray()));
+            Console.Write("|");
+
+            Console.Write("Kритерии".ApplyAlign(2, t.maxColWidth.GetSum(Enumerable.Range(0, t.GetY()).ToArray()) + t.GetY() - 1));
+            Console.Write("|");
+            Console.WriteLine();
+            t.PrintTable();
+        }
+
+        // Таблица - информация об оценках Альтернатив
         static void ShowTableAK(List<A> As, List<K> Ks)
         {
             // Создание таблицы
@@ -198,10 +266,22 @@ namespace PR2
             Console.Write("|");
             Console.WriteLine();
             t.PrintTable();
+            Console.Write("|");
+            Console.Write(" Вес К".ApplyAlign(0, t.maxColWidth.GetSum(new int[] { 0, 1 }) + 1) + "|");
+            for (int i = 0; i < Ks.Count; i++)
+                Console.Write(Ks[i].weight.ToString().ApplyAlign(2, t.maxColWidth[i + 2]) + "|");
+            Console.WriteLine();
+            Console.WriteLine(t.GetTableLineSeparator(new int[] { 0 }));
+            Console.Write("|");
+            Console.Write(" Стр К".ApplyAlign(0, t.maxColWidth.GetSum(new int[] { 0, 1 }) + 1) + "|");
+            for (int i = 0; i < Ks.Count; i++)
+                Console.Write((Ks[i].positive ? "Max" : "Min").ApplyAlign(2, t.maxColWidth[i + 2]) + "|");
+            Console.WriteLine();
+            Console.WriteLine(t.GetTableLineSeparator(new int[] { 0 }));
         }
 
-        // Таблица - информация об Отношениях Парето-Доминирования
-        static void ShowTableR(int[,] infoRelations)
+        // Таблица - матрица предпочтений проектов, составленная методом ЭЛЕКТРА
+        static void ShowTableP(string[,] infoPreferences)
         {
             // Создание таблицы
             Table t = new Table(As.Count + 1, As.Count + 1);
@@ -215,32 +295,20 @@ namespace PR2
             for (int i = 1; i <= As.Count; i++)
                 for (int j = 1; j <= As.Count; j++)
                 {
-                    if (i <= j)
-                    {
-                        t.table[i, j] = "-";
-                        continue;
-                    }
-
-                    // Информация об отношениях Парето-Доминирования
-                    // между объектами A (с индекстом i-1) и B (с индексом j-1).
-                    switch (infoRelations[i - 1, j - 1])
-                    {
-                        case 1: // Объект A доминирующий
-                            t.table[i, j] = i.ToString();
-                            break;
-                        case -1: // Объект A доминируемый
-                            t.table[i, j] = j.ToString();
-                            break;
-                        default: // Объекты A и B несравнимые
-                            t.table[i, j] = "н";
-                            break;
-                    }
+                    t.table[i, j] = infoPreferences[i-1, j-1];
                 }
 
-            // Оформление таблицы остается по умолчанию
+            // Оформление таблицы
+            for (int i = 0; i < t.GetX(); i++)
+                for (int j = 0; j < t.GetY(); j++)
+                    t.style[i, j] = "0C0";
 
             // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
             t.UpdateInfo();
+
+            // Дополнительное оформление таблицы
+            for (int j = 1; j <= As.Count; j++)
+                t.maxColWidth[j] = 5;
 
             // Вывод таблицы
             t.PrintTable();
@@ -262,7 +330,7 @@ namespace PR2
                 {
                     // Входные Данные
                     case Command.CMD_IN:
-                        Console.WriteLine("ВХОДНЫЕ ДАННЫЕ");
+                        Console.WriteLine("ТАБЛИЦА ОЦЕНОК ПРОЕКТОВ ПО КРИТЕРИЯМ");
                         ShowTableAK(As, Ks);
                         Console.WriteLine("Исходное множество решений: {{ {0} }}",
                             String.Join(", ", As.Select(x => "A" + (As.IndexOf(x) + 1))));
@@ -270,73 +338,21 @@ namespace PR2
                         NewAs = new List<A>(As);
                         Console.WriteLine();
                         break;
-                    // Метод Парето
+                    // Таблица Критериев
+                    case Command.CMD_IN_K:
+                        Console.WriteLine("ТАБЛИЦА КРИТЕРИЕВ ДЛЯ ОЦЕНОК ПРОЕКТОВ");
+                        ShowTableK(Ks);
+                        Console.WriteLine();
+                        break;
+                    // Метод ЭЛЕКТРА 2
                     case Command.CMD_PARETO:
-                        Console.WriteLine("МЕТОД ПАРЕТО");
-                        Console.WriteLine("Отношения Парето-доминирования:");
-                        int[,] infoRelations; // Информация об отношениях
-                        NewAs = Pareto(CurAs, Ks, out infoRelations); // Новый список альтернатив
-                        ShowTableR(infoRelations);
-                        Console.WriteLine("Исключенные доминируемые альтернативы: {0}", String.Join("; ", GetChanges(CurAs, NewAs)
-                            .Where(x => x.c == '-').Select(x => x.a).Select(x => "-A" + (As.IndexOf(x) + 1))
-                            ));
-                        CurAs = new List<A>(NewAs);
-                        Console.WriteLine("Полученное множество решений: {{ {0} }}",
-                            String.Join(", ", CurAs.Select(x => "A" + (As.IndexOf(x) + 1))));
-                        Console.WriteLine();
-                        break;
-                    // Указание Границ Критериев
-                    case Command.CMD_NAR_BOUNDS:
-                        Console.WriteLine("УКАЗАНИЕ ГРАНИЦ КРИТЕРИЕВ");
-                        Console.WriteLine("Границы критериев: {0}",
-                            String.Join(" ; ", N_Bounds
-                            .Select(x => "K" + (x.k + 1) + (Ks[x.k].positive ? " >= " : " <= ") + x.bound)));
-                        NewAs = Narrowing_Bounds(CurAs, Ks, N_Bounds);
-                        Console.WriteLine("Сужение множества решений: {0}", String.Join("; ", GetChanges(CurAs, NewAs)
-                            .Where(x => x.c == '-').Select(x => x.a).Select(x => "-A" + (As.IndexOf(x) + 1))
-                            ));
-                        CurAs = new List<A>(NewAs);
-                        Console.WriteLine("Полученное множество решений: {{ {0} }}",
-                            String.Join(", ", CurAs.Select(x => "A" + (As.IndexOf(x) + 1))));
-                        Console.WriteLine();
-                        break;
-                    // Субоптимизация
-                    case Command.CMD_NAR_SUBOPTIMIZATION:
-                        Console.WriteLine("СУБОПТИМИЗАЦИЯ");
-                        Console.WriteLine("Выделенный критерий: {0}",
-                            ((Func<string>)(() =>
-                            {
-                                int t = N_Suboptimization.FindIndex(x => x.flag == 'X') + 1;
-                                return t == 0 ? "" : "K" + t;
-                            }
-                            ))());
-                        Console.WriteLine("Границы остальных критериев: {0}",
-                            String.Join(" ; ", N_Suboptimization
-                                .Select((x, i) => (knum: i + 1, kinfo: x)).Where(x => x.kinfo.flag == '\0')
-                                .Select(x => "K" + x.knum + (Ks[x.knum - 1].positive ? " >= " : " <= ") + x.kinfo.bound)
-                            )
-                        );
-                        NewAs = Narrowing_Suboptimization(CurAs, Ks, N_Suboptimization);
-                        Console.WriteLine("Сужение множества решений: {0}", String.Join("; ", GetChanges(CurAs, NewAs)
-                            .Where(x => x.c == '-').Select(x => x.a).Select(x => "-A" + (As.IndexOf(x) + 1))
-                            ));
-                        CurAs = new List<A>(NewAs);
-                        Console.WriteLine("Полученное множество решений: {{ {0} }}",
-                            String.Join(", ", CurAs.Select(x => "A" + (As.IndexOf(x) + 1))));
-                        Console.WriteLine();
-                        break;
-                    // Лексикографическая Оптимизация
-                    case Command.CMD_NAR_LEXICOGRAPHICAL:
-                        Console.WriteLine($"ЛЕКСИКОГРАФИЧЕСКАЯ ОПТИМИЗАЦИЯ");
-                        Console.WriteLine("Порядок критериев по их относительной важности: {0}",
-                            String.Join(" > ", N_Lexicographical.Select(x => "K" + x)));
-                        NewAs = Narrowing_Lexicographical(NewAs, Ks, N_Lexicographical);
-                        Console.WriteLine("Сужение множества решений: {0}", String.Join("; ", GetChanges(CurAs, NewAs)
-                            .Where(x => x.c == '-').Select(x => x.a).Select(x => "-A" + (As.IndexOf(x) + 1))
-                            ));
-                        CurAs = new List<A>(NewAs);
-                        Console.WriteLine("Полученное множество решений: {{ {0} }}",
-                            String.Join(", ", CurAs.Select(x => "A" + (As.IndexOf(x) + 1))));
+                        Console.WriteLine("МЕТОД ЭЛЕКТРА");
+                        Console.WriteLine("Полная матрица предпочтений проектов:");
+                        string[,] infoPreferences; // Матрица предпочтений проектов
+                        string graphViz; // Код GraphViz для графа
+                        bool isSolutionReady = Elektra(CurAs, Ks, out infoPreferences, out graphViz); // Метод ЭЛЕКТРА
+                        Console.WriteLine("Решение не получено: в графе присутствуют циклы.");
+                        ShowTableP(infoPreferences);
                         Console.WriteLine();
                         break;
                     // Полученное Множество Решений

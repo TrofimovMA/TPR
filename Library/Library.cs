@@ -21,6 +21,7 @@ namespace Library
             public StyleString[,] style; // Стиль ячеек
             public int[] maxRowHeight; // Наибольшая высота строки
             public int[] maxColWidth; // Наибольшая ширина столбца
+            public int[] lineSeparators; // Дополнительные линии-разделители
 
             // Конструктор
             public Table(int x, int y)
@@ -29,6 +30,7 @@ namespace Library
                 style = new StyleString[x, y];
                 maxRowHeight = new int[x];
                 maxColWidth = new int[y];
+                lineSeparators = new int[2] { 0, x - 1 };
 
                 for (int i = 0; i < x; i++)
                     for (int j = 0; j < y; j++)
@@ -97,7 +99,7 @@ namespace Library
                         Console.WriteLine();
                     }
 
-                    if (i == 0 || i == GetX() - 1)
+                    if (lineSeparators.Contains(i))
                         Console.WriteLine(GetTableLineSeparator());
                 }
             }
@@ -175,6 +177,12 @@ namespace Library
                     int rightPadding = width - s.Length - leftPadding;
                     return new string(' ', leftPadding) + s + new string(' ', rightPadding);
             }
+        }
+        public static string DelQuotes(this string str)
+        {
+            string s; int f = 0; int l = str.Length - 1;
+            s = str.Substring((str[f] == '"' && str[l] == '"') ? 1 : 0, str.Length - ((str[f] == '"' && str[l] == '"') ? 2 : 0));
+            return s;
         }
         public static string Repeat(this string str, int num)
         {

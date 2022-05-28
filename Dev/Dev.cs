@@ -4,19 +4,69 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Library;
+using System.IO;
+using System.Text.RegularExpressions;
 
 namespace Dev
 {
     internal static class Dev
     {
+        static readonly string inputFile = @"G:\VSProjects\TPR\PR2\PR2.txt"; // Входной Файл
+
         static void Main(string[] args)
         {
-            K a = new K();
-            Console.WriteLine(a);
-            Console.WriteLine(a.scale);
-            Console.WriteLine(String.Join(", ", a.scale.Select(x => x.ToString())));
+            List<(int, int)> graph = new List<(int, int)>();
+            graph.Add((1, 2));
+            graph.Add((2, 3));
+            graph.Add((3, 4));
+            graph.Add((4, 5));
+
+            int[] maxWay = new int[5];
+            for (int i = 1; i <= 5; i++)
+            {
+                maxWay[i-1] = getMaxWay(graph, new List<int>() { i });
+                Console.WriteLine(maxWay[i - 1]);
+            }
 
             Console.ReadKey();
+        }
+
+        static int getMaxWay(List<(int, int)> graph, List<int> way)
+        {
+            int cur = way.Last();
+            int length = way.Count()-1;
+            List<int> nexts = graph.Where(x => x.Item1 == cur).Select(x => x.Item2).ToList();
+            foreach (var x in nexts)
+            {
+                if (way.Contains(x))
+                    return length;
+
+                List<int> newWay = new List<int>(way);
+                newWay.Add(x);
+                length = Math.Max(length, getMaxWay(graph, newWay));
+            }
+            return length;
+        }
+
+
+        static bool nodeSearch(List<(int, int)> graph, List<int> way, int dest)
+        {
+            int cur = way.Last();
+            bool answer = false;
+            List<int> nexts = graph.Where(x => x.Item1 == cur).Select(x => x.Item2).ToList();
+            foreach (var x in nexts)
+            {
+                if (way.Contains(x))
+                    continue;
+
+                if (x == dest)
+                    return true;
+
+                List<int> newWay = new List<int>(way);
+                newWay.Add(x);
+                answer |= nodeSearch(graph, newWay, dest);
+            }
+            return answer;
         }
 
         // Критерий

@@ -8,7 +8,7 @@ namespace PR2
     static internal partial class PR2
     {
         // Деление шкалы
-        struct ScaleMark
+        public struct ScaleMark
         {
             public string Name;
             public int Code;
@@ -26,6 +26,11 @@ namespace PR2
             }
 
             public override string ToString()
+            {
+                return string.Format("SM(\"{0}\", {1})", Name, Code);
+            }
+
+            public string Print()
             {
                 return string.Format("SM(\"{0}\", {1})", Name, Code);
             }
