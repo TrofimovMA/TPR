@@ -350,9 +350,23 @@ namespace PR2
                         Console.WriteLine("Полная матрица предпочтений проектов:");
                         string[,] infoPreferences; // Матрица предпочтений проектов
                         string graphViz; // Код GraphViz для графа
-                        bool isSolutionReady = Elektra(CurAs, Ks, out infoPreferences, out graphViz); // Метод ЭЛЕКТРА
-                        Console.WriteLine("Решение не получено: в графе присутствуют циклы.");
-                        ShowTableP(infoPreferences);
+                        try
+                        {
+                            Dictionary<int, int[]> levels = Elektra(CurAs, Ks, out infoPreferences, out graphViz);
+                            ShowTableP(infoPreferences);
+                            Console.WriteLine("Решение получено: ");
+                            levels.ToList().ForEach(x => Console.WriteLine(x.Key + "->" + String.Join(", ", x.Value)));
+                            for (int i = 1; i <= levels.Count; i++)
+                            {
+                                Console.WriteLine(levels[i]);
+                                Console.WriteLine(String.Join(",", levels[i]));
+                                Console.WriteLine("Уровень {0} <=> ({1})", i, String.Join(", ", levels[i]));
+                            }
+                        }
+                        catch (Exception e) when (e is GraphIsLoopedException || e is GraphIsNotConnectedException)
+                        {
+                            Console.WriteLine("Решение не получено: {0}", e.Message);
+                        }
                         Console.WriteLine();
                         break;
                     // Полученное Множество Решений

@@ -61,10 +61,8 @@ namespace PR2
         // Метод ЭЛЕКТРА
         // - Главная Функция
         // ( Составление матрицы предпочтений проектов )
-        static bool Elektra(List<A> As, List<K> Ks, out string[,] infoPreferences, out string graphVizStr, float threshold = 1f)
+        static Dictionary<int, int[]> Elektra(List<A> As, List<K> Ks, out string[,] infoPreferences, out string graphVizStr, float threshold = 1f)
         {
-            bool isSolutionReady = true;
-
             infoPreferences = new string[As.Count, As.Count];
             for (int i = 0; i < As.Count; i++)
                 for (int j = 0; j < As.Count; j++)
@@ -116,35 +114,49 @@ namespace PR2
                     Console.WriteLine(i + " / " + j + " / " + nodeSearch(graphExt, new List<int>() { i }, j));
                     canAchieveAll &= nodeSearch(graphExt, new List<int>() { i }, j);
                 }
-            Console.WriteLine(canAchieveAll);
+            if (!canAchieveAll)
+                throw new GraphIsNotConnectedException("Граф не является целостным");
 
             // Проверка на петли
             bool loopDetected = false;
             for (int i = 1; i <= As.Count; i++)
                 loopDetected |= loopSearch(graph, new List<int>() { i });
-            Console.WriteLine(loopDetected);
+            if (loopDetected)
+                throw new GraphIsLoopedException("Граф содержит петли");
 
             // Уровни графа
             int[] maxWay = new int[As.Count];
             for (int i = 1; i <= As.Count; i++)
-            {
                 maxWay[i - 1] = getMaxWay(graph, new List<int>() { i });
-                Console.WriteLine(maxWay[i - 1]);
-            }
             Dictionary<int, int> map = new Dictionary<int, int>();
             for (int i = 0; i < As.Count; i++)
                 map[i] = maxWay[i];
             maxWay = maxWay.ToList().Distinct().OrderByDescending(x => x).ToArray();
-            Console.WriteLine("Уровни графа:");
-            for(int i=0; i < maxWay.Length; i++)
+            Dictionary<int, int[]> levels = new Dictionary<int, int[]>();
+            for (int i = 0; i < maxWay.Length; i++)
             {
-                Console.WriteLine("Уровень {0} : {1}", i + 1, String.Join(", ", map.Where(x => x.Value == maxWay[i]).Select(x => x.Key+1)));
+                levels[i + 1] = map.Where(x => x.Value == maxWay[i]).Select(x => x.Key + 1).ToArray();
             }
+           levels.ToList().ForEach(x => Console.WriteLine(x.Key + "->" + String.Join(", ", x.Value)));
 
-            // Получено ли решение?
-            return isSolutionReady;
+            // Альтернативы, расположенные по уровням
+            return levels;
         }
 
+        // Метод ЭЛЕКТРА
+        // - Возможные Исключения
+        // ( Полученный граф содержит петли или не является целостным )
+        public class GraphIsLoopedException : Exception
+        {
+            public GraphIsLoopedException(string message) : base(message) { }
+        }
+        public class GraphIsNotConnectedException : Exception
+        {
+            public GraphIsNotConnectedException(string message) : base(message) { }
+        }
+
+        // Работа с Графом
+        // - Нахождение самого длинного пути из вершины в графе
         static int getMaxWay(List<(int, int)> graph, List<int> way)
         {
             int cur = way.Last();
@@ -161,7 +173,7 @@ namespace PR2
             }
             return length;
         }
-
+        // - Поиск петель в графе
         static bool loopSearch(List<(int, int)> graph, List<int> way)
         {
             int cur = way.Last();
@@ -178,7 +190,7 @@ namespace PR2
             }
             return answer;
         }
-
+        // - Возможно ли попасть из одной вершины в другую
         static bool nodeSearch(List<(int, int)> graph, List<int> way, int dest)
         {
             int cur = way.Last();

@@ -13,8 +13,22 @@ namespace Dev
     {
         static readonly string inputFile = @"G:\VSProjects\TPR\PR2\PR2.txt"; // Входной Файл
 
+        public class GraphIsLoopedException : Exception
+        {
+            public GraphIsLoopedException(string message) : base(message) { }
+        }
+
+        public class GraphIsNotConnectedException: Exception
+        {
+            public GraphIsNotConnectedException(string message) : base(message) { }
+        }
+
+
+
         static void Main(string[] args)
         {
+            Console.ReadKey();
+            return;
             List<(int, int)> graph = new List<(int, int)>();
             graph.Add((1, 2));
             graph.Add((2, 3));
