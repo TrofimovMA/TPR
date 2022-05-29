@@ -97,7 +97,7 @@ namespace PR2
             graphVizStr += "digraph D {\r\n";
             foreach ((int, int) ii in graph)
                 graphVizStr += "  \"" + ii.Item1 + "\" -> \"" + ii.Item2 + "\";\r\n";
-            graphVizStr += "}\r\n";
+            graphVizStr += "}";
 
             // Проверка на целостность графа
             List<(int, int)> graphExt = new List<(int, int)> (graph);
@@ -129,7 +129,7 @@ namespace PR2
             Dictionary<int, int> map = new Dictionary<int, int>();
             for (int i = 0; i < As.Count; i++)
                 map[i] = maxWay[i];
-            maxWay = maxWay.ToList().Distinct().OrderByDescending(x => x).ToArray();
+            maxWay = maxWay.ToList().Distinct().OrderBy(x => x).ToArray();
             Dictionary<int, int[]> levels = new Dictionary<int, int[]>();
             for (int i = 0; i < maxWay.Length; i++)
             {
@@ -153,12 +153,12 @@ namespace PR2
         }
 
         // Работа с Графом
-        // - Нахождение самого длинного пути из вершины в графе
+        // - Нахождение самого длинного пути из вершины в графе в обратную сторону
         static int getMaxWay(List<(int, int)> graph, List<int> way)
         {
             int cur = way.Last();
             int length = way.Count() - 1;
-            List<int> nexts = graph.Where(x => x.Item1 == cur).Select(x => x.Item2).ToList();
+            List<int> nexts = graph.Where(x => x.Item2 == cur).Select(x => x.Item1).ToList();
             foreach (var x in nexts)
             {
                 if (way.Contains(x))

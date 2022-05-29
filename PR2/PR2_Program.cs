@@ -33,7 +33,7 @@ namespace PR2
             string inputStr = File.ReadAllText(inputFile);
 
             // Обработка Входных Данных
-            Regex regex; Match match; string str;
+            Regex regex; Match match;
             Dictionary<string, ScaleMark[]> scales = new Dictionary<string, ScaleMark[]>();
             List<(string name, string scale, string weight, string positive)> KsTemp = new List<(string, string, string, string)>();
             // - Обработка комментариев
@@ -94,7 +94,6 @@ namespace PR2
                     a.values.AddRange(new int[Ks.Count - a.values.Count]);
                 }
             }
-            Console.WriteLine(String.Join(", ", Commands)); //!
 
             CurAs = new List<A>(As);
         }
@@ -275,7 +274,7 @@ namespace PR2
                     // Код GraphViz для графа
                     case "GVCODE":
                         Console.WriteLine("КОД GRAPHVIZ ДЛЯ ГРАФА");
-                        Console.WriteLine($"\r\n\r\n{graphViz}");
+                        Console.WriteLine($"{graphViz}");
                         Console.WriteLine();
                         break;
                     default:
@@ -288,16 +287,19 @@ namespace PR2
                             else
                                 T = p.InterParseFloat();
                             Console.WriteLine("МЕТОД ЭЛЕКТРА (порог отбора предпочтений: T={0})", T);
-                            Console.WriteLine("Полная матрица предпочтений проектов:");
                             string[,] infoPreferences; // Матрица предпочтений проектов
                             try
                             {
                                 Dictionary<int, int[]> levels = Elektra(CurAs, Ks, out infoPreferences, out graphViz, T);
+                                Console.WriteLine("Полная матрица предпочтений проектов:");
                                 ShowTableP(infoPreferences);
-                                Console.WriteLine("Решение получено: ");
+                                Console.WriteLine("Решение:");
                                 for (int i = 1; i <= levels.Count; i++)
                                 {
-                                    Console.WriteLine("Уровень {0} <=> ({1})", i, String.Join(", ", levels[i]));
+                                    string levelName = String.Format("{0}-е место", i);
+                                    string additional;
+                                    additional = (i == 1) ? "(лучшее решение)" : (i == levels.Count) ? "(худшее решение)" : "";
+                                    Console.WriteLine("{0}: {1} {2}", levelName, String.Join(", ", levels[i].Select(x => "A"+x)), additional);
                                 }
                             }
                             catch (Exception e) when (e is GraphIsLoopedException || e is GraphIsNotConnectedException)

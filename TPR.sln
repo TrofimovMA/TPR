@@ -11,6 +11,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dev", "Dev\Dev.csproj", "{9
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Other", "Other", "{6EC18A71-CF36-46B3-AB23-91DB60BFA0E5}"
 	ProjectSection(SolutionItems) = preProject
+		Notes.txt = Notes.txt
 		Other\PR.bat = Other\PR.bat
 		Other\PR1.bat = Other\PR1.bat
 		Other\PR1_s.txt = Other\PR1_s.txt

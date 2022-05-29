@@ -23,4 +23,4 @@ A("7", 10, 5, 10, 5, 7, 10)	 // A7
 
 
 // Программа (порядок выполнения команд программы)
-S -> IN_K -> IN_AK -> ELEKTRA(1.0) -> ELEKTRA(2.0) -> ELEKTRA(3.0) -> ELEKTRA(4.0) -> ELEKTRA(5.0) ->  OUT
+S -> IN_K -> IN_AK -> ELEKTRA(1.0) -> GVCODE -> ELEKTRA(2.0) -> ELEKTRA(3.0) -> ELEKTRA(4.0) -> ELEKTRA(7.0)

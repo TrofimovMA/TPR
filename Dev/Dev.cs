@@ -27,17 +27,27 @@ namespace Dev
 
         static void Main(string[] args)
         {
-            Console.ReadKey();
-            return;
             List<(int, int)> graph = new List<(int, int)>();
-            graph.Add((1, 2));
-            graph.Add((2, 3));
-            graph.Add((3, 4));
+            graph.Add((1, 6));
+            graph.Add((3, 3));
             graph.Add((4, 5));
+            graph.Add((4, 6));
+            graph.Add((4, 5));
+            graph.Add((5, 1));
+            graph.Add((5, 2));
+            graph.Add((5, 6));
+            graph.Add((7, 6));
 
-            int[] maxWay = new int[5];
-            for (int i = 1; i <= 5; i++)
-                maxWay[i-1] = getMaxWay(graph, new List<int>() { i });
+            // Уровни графа
+            int[] maxWay = new int[7];
+            for (int i = 1; i <= 7; i++)
+                maxWay[i - 1] = getMaxWay(graph, new List<int>() { i });
+            Dictionary<int, int> map = new Dictionary<int, int>();
+            for (int i = 0; i < 7; i++)
+                map[i] = maxWay[i];
+            map.ToList().ForEach(x => Console.WriteLine((x.Key+1) + "->" + String.Join(", ", x.Value))); //DEBUG
+            maxWay = maxWay.ToList().Distinct().OrderByDescending(x => x).ToArray();
+            Dictionary<int, int[]> levels = new Dictionary<int, int[]>();
 
             Console.ReadKey();
         }
@@ -45,8 +55,9 @@ namespace Dev
         static int getMaxWay(List<(int, int)> graph, List<int> way)
         {
             int cur = way.Last();
-            int length = way.Count()-1;
-            List<int> nexts = graph.Where(x => x.Item1 == cur).Select(x => x.Item2).ToList();
+            int length = way.Count() - 1;
+            // В обратную сторону
+            List<int> nexts = graph.Where(x => x.Item2 == cur).Select(x => x.Item1).ToList();
             foreach (var x in nexts)
             {
                 if (way.Contains(x))
