@@ -75,17 +75,7 @@ namespace PR3
                 Fraction[,] M = new Fraction[size, size];
                 for (int i = 0; i < par.Count; i++)
                     M[i / size, i % size] = (Fraction)par[i];
-                for (int i = 0; i < size; i++)
-                {
-                    for (int j = 0; j < size; j++)
-                    {
-                        Console.Write(M[i, j] + " ");
-                    }
-                    Console.WriteLine();
-                }
                 Ms.Add(id, M);
-                Console.WriteLine();
-
                 //Console.WriteLine(id);
                 //Console.WriteLine(pars);
                 //Console.WriteLine(String.Join(", ", par.ToList()));
@@ -243,15 +233,44 @@ namespace PR3
                 Console.Write($"{++cmdCount}. ");
                 switch (c)
                 {
-                    // Входные Данные
-                    case "IN_AK":
-                        Console.WriteLine("ТАБЛИЦА ОЦЕНОК ПРОЕКТОВ ПО КРИТЕРИЯМ");
-                        ShowTableAK(As, Ks);
-                        CurAs = new List<A>(As);
+                    // Метод МАИ
+                    case "MAI":
+                        Console.WriteLine("МЕТОД МАИ");
+                        int X = Ms["T"].GetLength(0);
+                        Dictionary<(string, int), float> V = new Dictionary<(string, int), float>();
+                        Dictionary<(string, int), float> W = new Dictionary<(string, int), float>();
+                        Dictionary<string, float> SV = new Dictionary<string, float>();
+                        List<string> objs = new List<string>();
+                        objs.Add("T");
+                        Enumerable.Range(1, 5).ToList().ForEach(x => objs.Add("K" + x.ToString()));
+                        Console.WriteLine("1. СИНТЕЗ ПРИОРИТЕТОВ");
+                        foreach (string obj in objs)
+                        {
+                            SV[obj] = 0f;
+                            for (int i = 0; i < X; i++)
+                            {
+                                V[(obj, i)] = 1f;
+                                for (int j = 0; j < X; j++)
+                                {
+                                    V[(obj, i)] *= Ms[obj][i, j];
+                                }
+                                V[(obj, i)] = (float)Math.Pow(V[(obj, i)], 1f / X);
+                                SV[obj] += V[(obj, i)];
+                            }
+                            Console.WriteLine(String.Join(", ", V.Where(x => x.Key.Item1 == obj).Select(x => x.Value)));
+                            Console.WriteLine(SV[obj]);
+                            for (int i = 0; i < X; i++)
+                            {
+                                W[(obj, i)] = V[(obj, i)] / SV[obj];
+                            }
+                            Console.WriteLine(String.Join(", ", W.Where(x => x.Key.Item1 == obj).Select(x => x.Value)));
+                            Console.WriteLine();
+                        }
                         Console.WriteLine();
                         break;
+
                     default:
-                        // Метод МАИ
+                        // Входные Матрицы
                         if (c.StartsWith("IN"))
                         {
                             Console.WriteLine("ТАБЛИЦА");
