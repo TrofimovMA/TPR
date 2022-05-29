@@ -98,7 +98,6 @@ namespace PR2
             foreach ((int, int) ii in graph)
                 graphVizStr += "  \"" + ii.Item1 + "\" -> \"" + ii.Item2 + "\";\r\n";
             graphVizStr += "}\r\n";
-            Console.Write($"GraphViz Сode:\r\n\r\n{graphVizStr}");
 
             // Проверка на целостность графа
             List<(int, int)> graphExt = new List<(int, int)> (graph);
@@ -111,7 +110,6 @@ namespace PR2
                     if (i == j)
                         continue;
 
-                    Console.WriteLine(i + " / " + j + " / " + nodeSearch(graphExt, new List<int>() { i }, j));
                     canAchieveAll &= nodeSearch(graphExt, new List<int>() { i }, j);
                 }
             if (!canAchieveAll)
@@ -137,7 +135,6 @@ namespace PR2
             {
                 levels[i + 1] = map.Where(x => x.Value == maxWay[i]).Select(x => x.Key + 1).ToArray();
             }
-           levels.ToList().ForEach(x => Console.WriteLine(x.Key + "->" + String.Join(", ", x.Value)));
 
             // Альтернативы, расположенные по уровням
             return levels;

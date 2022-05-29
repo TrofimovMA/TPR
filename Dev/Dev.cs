@@ -37,10 +37,7 @@ namespace Dev
 
             int[] maxWay = new int[5];
             for (int i = 1; i <= 5; i++)
-            {
                 maxWay[i-1] = getMaxWay(graph, new List<int>() { i });
-                Console.WriteLine(maxWay[i - 1]);
-            }
 
             Console.ReadKey();
         }

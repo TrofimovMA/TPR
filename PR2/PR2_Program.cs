@@ -21,23 +21,10 @@ namespace PR2
         static readonly List<(char flag, float bound)> N_Suboptimization = new List<(char, float)>(); // Субоптимизация
         static readonly List<int> N_Lexicographical = new List<int>(); // Лексикографическая Оптимизация
 
-        static readonly List<Command> Commands = new List<Command>(); // Последовательность Команд Программы
+        static readonly List<string> Commands = new List<string>(); // Последовательность Команд Программы
         static List<A> CurAs = new List<A>(); // Текущий cписок Альтернатив
-        static List<A> NewAs = new List<A>(); // Новый cписок Альтернатив
 
-        // Команды Программы, которые могут быть в Инструкции
-        enum Command
-        {
-            CMD_IN,
-            CMD_IN_K,
-            CMD_PARETO,
-            CMD_NAR_BOUNDS,
-            CMD_NAR_SUBOPTIMIZATION,
-            CMD_NAR_LEXICOGRAPHICAL,
-            CMD_CHANGES,
-            CMD_OUT_FULL,
-            CMD_OUT
-        }
+        static string graphViz = String.Empty; // Код GraphViz для графа
 
         // Загрузка Входных Данных
         static void LoadInputData()
@@ -50,10 +37,10 @@ namespace PR2
             Dictionary<string, ScaleMark[]> scales = new Dictionary<string, ScaleMark[]>();
             List<(string name, string scale, string weight, string positive)> KsTemp = new List<(string, string, string, string)>();
             // - Обработка комментариев
-            regex = new Regex(@"^(.*?)(\/\/.*)$", RegexOptions.Multiline);
+            regex = new Regex(@"^\s*(.*?)\s*(\/\/.*)?$", RegexOptions.Multiline);
             inputStr = regex.Replace(inputStr, "$1");
             // - Обработка Альтернатив, Критериев и Шкал Критериев
-            regex = new Regex(@"(?<type>K|A|S)\(((\s*)|(\s*((""(?<name>.*?)"")|(?<name>.*?))\s*(,\s*(?<pars>.*?)\s*)*))\)");
+            regex = new Regex(@"^(?<type>K|A|S)\(((\s*)|(\s*((""(?<name>.*?)"")|(?<name>.*?))\s*(,\s*(?<pars>.*?)\s*)*))\)$", RegexOptions.Multiline);
             foreach (Match m in regex.Matches(inputStr))
             {
                 string name = m.Groups["name"].Value;
@@ -83,80 +70,21 @@ namespace PR2
             {
                 Ks.Add(new K(name, scales[scale], int.Parse(weight), positive != "-"));
             }
-            // - Обработка параметров "Указание Границ Критериев"
-            str = @"\(\s*(?<k>\d+?)\s*,\s*(?<bound>\S+)\s*\)";
-            regex = new Regex($@"N_BOUNDS\(\s*{str}(\s*,\s*{str}\s*)*\s*\)");
-            foreach (Match m in regex.Matches(inputStr))
-            {
-                for (int i = 0; i < m.Groups["k"].Captures.Count; i++)
-                {
-                    N_Bounds.Add((
-                        int.Parse(m.Groups["k"].Captures[i].Value) - 1,
-                        m.Groups["bound"].Captures[i].Value.InterParseFloat()));
-                }
-            }
-            // - Обработка параметров "Субоптимизация"
-            str = @"(?<k>\S+?)";
-            regex = new Regex($@"N_SUBOPTIMIZATION\(\s*{str}\s*(\s*(,\s*{str}\s*))*\)");
-            match = regex.Match(inputStr);
-            for (int i = 0; i < match.Groups["k"].Captures.Count; i++)
-            {
-                if (match.Groups["k"].Captures[i].Value.ToUpper() == "X")
-                    N_Suboptimization.Add(('X', 0f));
-                else if (match.Groups["k"].Captures[i].Value.ToUpper() == "N")
-                    N_Suboptimization.Add(('N', 0f));
-                else
-                    N_Suboptimization.Add(('\0', match.Groups["k"].Captures[i].Value.InterParseFloat()));
-            }
-            // - Обработка параметров "Лексикографическая Оптимизация"
-            str = @"(?<k>\d+?)";
-            regex = new Regex($@"N_LEXICOGRAPHICAL\(\s*{str}\s*(\s*(,\s*{str}\s*))*\)");
-            match = regex.Match(inputStr);
-            for (int i = 0; i < match.Groups["k"].Captures.Count; i++)
-                N_Lexicographical.Add(int.Parse(match.Groups["k"].Captures[i].Value));
             // - Обработка Списка Команд
-            regex = new Regex(@"S(\s*->\s*(?<cmd>\w+))+");
+            regex = new Regex(@"S(\s*->\s*(?<cmd>\w+(?<pars>\(\S+\))?))+");
             match = regex.Match(inputStr);
             if (match.Success)
             {
                 foreach (Capture c in match.Groups["cmd"].Captures)
-                {
-                    switch (c.Value)
-                    {
-                        case "IN":
-                            Commands.Add(Command.CMD_IN);
-                            break;
-                        case "IN_K":
-                            Commands.Add(Command.CMD_IN_K);
-                            break;
-                        case "PARETO":
-                            Commands.Add(Command.CMD_PARETO);
-                            break;
-                        case "N_BOUNDS":
-                            Commands.Add(Command.CMD_NAR_BOUNDS);
-                            break;
-                        case "N_SUBOPTIMIZATION":
-                            Commands.Add(Command.CMD_NAR_SUBOPTIMIZATION);
-                            break;
-                        case "N_LEXICOGRAPHICAL":
-                            Commands.Add(Command.CMD_NAR_LEXICOGRAPHICAL);
-                            break;
-                        case "CHANGES":
-                            Commands.Add(Command.CMD_CHANGES);
-                            break;
-                        case "OUT":
-                            Commands.Add(Command.CMD_OUT);
-                            break;
-                        case "OUT_FULL":
-                            Commands.Add(Command.CMD_OUT_FULL);
-                            break;
-                    }
-                }
+                    Commands.Add(c.Value);
             }
 
             // Частичное исправление некорректных Входных Данных
             if (Commands.Count < 1)
-                Commands.Add(Command.CMD_IN);
+            {
+                Commands.Add("IN_K");
+                Commands.Add("IN_AK");
+            }
             foreach (A a in As)
             {
                 if (a.values.Count() > Ks.Count)
@@ -166,9 +94,9 @@ namespace PR2
                     a.values.AddRange(new int[Ks.Count - a.values.Count]);
                 }
             }
+            Console.WriteLine(String.Join(", ", Commands)); //!
 
             CurAs = new List<A>(As);
-            NewAs = new List<A>(As);
         }
 
         // Таблица - информация о Критериях
@@ -323,69 +251,61 @@ namespace PR2
 
             // Выполнение Инструкции = Результат Программы = Выходные Данные
             int cmdCount = 0;
-            foreach (Command c in Commands)
+            foreach (string c in Commands)
             {
+                string p = String.Empty;
+                if (c.IndexOf("(") != -1)
+                    p = c.Substring(c.IndexOf("(") + 1, c.Length - c.IndexOf("(") - 2);
                 Console.Write($"{++cmdCount}. ");
                 switch (c)
                 {
                     // Входные Данные
-                    case Command.CMD_IN:
+                    case "IN_AK":
                         Console.WriteLine("ТАБЛИЦА ОЦЕНОК ПРОЕКТОВ ПО КРИТЕРИЯМ");
                         ShowTableAK(As, Ks);
-                        Console.WriteLine("Исходное множество решений: {{ {0} }}",
-                            String.Join(", ", As.Select(x => "A" + (As.IndexOf(x) + 1))));
                         CurAs = new List<A>(As);
-                        NewAs = new List<A>(As);
                         Console.WriteLine();
                         break;
                     // Таблица Критериев
-                    case Command.CMD_IN_K:
+                    case "IN_K":
                         Console.WriteLine("ТАБЛИЦА КРИТЕРИЕВ ДЛЯ ОЦЕНОК ПРОЕКТОВ");
                         ShowTableK(Ks);
                         Console.WriteLine();
                         break;
-                    // Метод ЭЛЕКТРА 2
-                    case Command.CMD_PARETO:
-                        Console.WriteLine("МЕТОД ЭЛЕКТРА");
-                        Console.WriteLine("Полная матрица предпочтений проектов:");
-                        string[,] infoPreferences; // Матрица предпочтений проектов
-                        string graphViz; // Код GraphViz для графа
-                        try
+                    // Код GraphViz для графа
+                    case "GVCODE":
+                        Console.WriteLine("КОД GRAPHVIZ ДЛЯ ГРАФА");
+                        Console.WriteLine($"\r\n\r\n{graphViz}");
+                        Console.WriteLine();
+                        break;
+                    default:
+                        // Метод ЭЛЕКТРА 2
+                        if (c.StartsWith("ELEKTRA"))
                         {
-                            Dictionary<int, int[]> levels = Elektra(CurAs, Ks, out infoPreferences, out graphViz);
-                            ShowTableP(infoPreferences);
-                            Console.WriteLine("Решение получено: ");
-                            levels.ToList().ForEach(x => Console.WriteLine(x.Key + "->" + String.Join(", ", x.Value)));
-                            for (int i = 1; i <= levels.Count; i++)
+                            float T;
+                            if (String.IsNullOrEmpty(p))
+                                T = 1f;
+                            else
+                                T = p.InterParseFloat();
+                            Console.WriteLine("МЕТОД ЭЛЕКТРА (порог отбора предпочтений: T={0})", T);
+                            Console.WriteLine("Полная матрица предпочтений проектов:");
+                            string[,] infoPreferences; // Матрица предпочтений проектов
+                            try
                             {
-                                Console.WriteLine(levels[i]);
-                                Console.WriteLine(String.Join(",", levels[i]));
-                                Console.WriteLine("Уровень {0} <=> ({1})", i, String.Join(", ", levels[i]));
+                                Dictionary<int, int[]> levels = Elektra(CurAs, Ks, out infoPreferences, out graphViz, T);
+                                ShowTableP(infoPreferences);
+                                Console.WriteLine("Решение получено: ");
+                                for (int i = 1; i <= levels.Count; i++)
+                                {
+                                    Console.WriteLine("Уровень {0} <=> ({1})", i, String.Join(", ", levels[i]));
+                                }
                             }
+                            catch (Exception e) when (e is GraphIsLoopedException || e is GraphIsNotConnectedException)
+                            {
+                                Console.WriteLine("Решение не получено: {0}", e.Message);
+                            }
+                            Console.WriteLine();
                         }
-                        catch (Exception e) when (e is GraphIsLoopedException || e is GraphIsNotConnectedException)
-                        {
-                            Console.WriteLine("Решение не получено: {0}", e.Message);
-                        }
-                        Console.WriteLine();
-                        break;
-                    // Полученное Множество Решений
-                    case Command.CMD_CHANGES:
-                        Console.WriteLine($"ПОЛУЧЕННОЕ МНОЖЕСТВО РЕШЕНИЙ");
-                        Console.WriteLine("{{ {0} }}", String.Join(", ", CurAs.Select(x => "A" + (As.IndexOf(x) + 1))));
-                        Console.WriteLine();
-                        break;
-                    case Command.CMD_OUT_FULL:
-                        // Итоговое Множество Решений (подробно)
-                        Console.WriteLine($"ИТОГОВОЕ МНОЖЕСТВО РЕШЕНИЙ (ПОДРОБНО)");
-                        ShowTableAK(NewAs, Ks);
-                        Console.WriteLine();
-                        break;
-                    case Command.CMD_OUT:
-                        // Итоговое Множество Решений
-                        Console.WriteLine($"ИТОГОВОЕ МНОЖЕСТВО РЕШЕНИЙ");
-                        Console.WriteLine("{{ {0} }}", String.Join(", ", CurAs.Select(x => "A" + (As.IndexOf(x) + 1))));
-                        Console.WriteLine();
                         break;
                 }
             }
