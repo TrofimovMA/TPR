@@ -13,6 +13,12 @@ namespace PR3
             public int N;
             public int D ;
 
+            public Fraction(int n, int d)
+            {
+                N = n;
+                D = d;
+            }
+
             // (Fraction) a = ((int) n, (int) d)
             public static implicit operator Fraction((int n, int d) pars)
             {
@@ -46,6 +52,26 @@ namespace PR3
             public static implicit operator string(Fraction f)
             {
                 return f.ToString();
+            }
+            public Fraction Normalization()//Нормализация дроби
+            {
+                return new Fraction(N / Lib.GetCommonDivisor(N, D), D / Lib.GetCommonDivisor(N, D));
+            }
+            public static Fraction operator +(Fraction a, Fraction b)
+            {
+                return new Fraction(a.N * b.D + b.N * a.D, a.D * b.D).Normalization();
+            }
+            public static Fraction operator -(Fraction a, Fraction b)
+            {
+                return new Fraction(a.N * b.D - b.N * a.D, a.D * b.D).Normalization();
+            }
+            public static Fraction operator *(Fraction a, Fraction b)
+            {
+                return new Fraction(a.N * b.N, a.D * b.D).Normalization();
+            }
+            public static Fraction operator /(Fraction a, Fraction b)
+            {
+                return new Fraction(a.N * b.D, b.N * a.D).Normalization();
             }
 
             public override string ToString()

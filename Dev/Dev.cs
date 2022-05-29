@@ -27,6 +27,7 @@ namespace Dev
 
         static void Main(string[] args)
         {
+            return;
             List<(int, int)> graph = new List<(int, int)>();
             graph.Add((1, 6));
             graph.Add((3, 3));

@@ -15,6 +15,10 @@ namespace PR3
 
         static string Target = String.Empty; // Цель
         static readonly Dictionary<string, string> Scale = new Dictionary<string, string>(); // Шкала отн. важности
+        static readonly Dictionary<int, float> SI = new Dictionary<int, float>()
+            { { 1, 0f }, { 2, 0f }, { 3, 0.58f }, {4, 0.9f }, {5, 1.12f },
+            {6, 1.24f }, {7, 1.32f }, {8, 1.41f }, {9, 1.45f }, {10, 1.49f },
+            {11, 1.51f }, {12, 1.48f }, {13, 1.56f }, {14, 1.57f }, {15, 1.59f } }; // Индекс Случайной Согласованности
         static readonly List<K> Ks = new List<K>(); // Список Критериев
         static readonly List<A> As = new List<A>(); // Список Альтернатив
         static readonly Dictionary<string, Fraction[,]> Ms = new Dictionary<string, Fraction[,]>();
@@ -115,6 +119,99 @@ namespace PR3
                 for (int j = 0; j < t.GetY(); j++)
                     t.style[i, j] = "1C1";
             //t.lineSeparators = Enumerable.Range(0, t.GetX()).ToArray();
+
+            // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
+            t.UpdateInfo();
+
+            // Вывод таблицы
+            t.PrintTable();
+        }
+
+        // Таблица 2
+        static void ShowTable(string obj, Fraction[,] M, Dictionary<(string, int), float> V, Dictionary<string, float> SV, Dictionary<(string, int), float> W)
+        {
+            int X = M.GetLength(0);
+            // Создание таблицы
+            Table t = new Table(X + 1, X + 3);
+
+            // Заполнение таблицы
+            int row, col;
+            string str = string.Empty;
+            row = 0; col = 0;
+            t.table[row, col] = obj;
+            for (int i = 1; i < X + 1; i++)
+                t.table[row, i] = t.table[i, col] = (obj[0] == 'T' ? "K" : "A") + i.ToString();
+            t.table[row, X + 1] = String.Format("V[{0} i]", obj);
+            t.table[row, X + 2] = String.Format("W[{1} {0} i]", obj, (obj == "T") ? "2" : "3");
+            for (int i = 1; i < X + 1; i++)
+            {
+                for (int j = 1; j < X + 1; j++)
+                    t.table[i, j] = M[i - 1, j - 1];
+            }
+            for(int i = 0; i < X; i++)
+            {
+                t.table[i+1, X+1] = Math.Round(V[(obj, i)], 3).ToString();
+                t.table[i+1, X+2] = Math.Round(W[(obj, i)], 3).ToString();
+            }
+
+            // Оформление таблицы
+            for (int i = 0; i < t.GetX(); i++)
+                for (int j = 0; j < t.GetY(); j++)
+                    t.style[i, j] = "1C1";
+            //t.lineSeparators = Enumerable.Range(0, t.GetX()).ToArray();
+
+            // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
+            t.UpdateInfo();
+
+            // Вывод таблицы
+            t.PrintTable();
+
+            // Нижняя строка с суммой
+            Console.Write("|");
+            Console.Write("S".ApplyAlign(2, t.maxColWidth.GetSum(Enumerable.Range(0, X+1).ToArray())+X+1-1) + "|");
+            Console.Write(Math.Round(SV[obj], 3).ToString().ApplyAlign(2, t.maxColWidth[X+1]) + "|");
+            Console.Write(1.ToString().ApplyAlign(2, t.maxColWidth[X + 2]) + "|");
+            Console.WriteLine();
+            Console.WriteLine(t.GetTableLineSeparator(new int[] { 0 }));
+        }
+
+        // Таблица 3
+        static void ShowTable(List<A> As, List<K> Ks, Dictionary<(string, int), float> W, Dictionary<int, float> Wa)
+        {
+            int X = As.Count;
+            int Y = Ks.Count;
+            // Создание таблицы
+            Table t = new Table(X+2, Y+2);
+
+            // Заполнение таблицы
+            int row, col;
+            string str = string.Empty;
+            row = 0; col = 0;
+            t.table[row, col] = "";
+            for (int i = 0; i < X; i++)
+                t.table[i+1, col] = As[i].name;
+            for (int j = 0; j < Y; j++)
+                t.table[row, j+1] = Ks[j].name;
+            t.table[row, Y + 1] = String.Format("Глобальный\nПриоритет\nW[i]");
+            for (int j = 0; j < Y; j++)
+                t.table[X + 1, j + 1] = W[("T", j)].ToString();
+            for (int i = 1; i < X + 1; i++)
+            {
+                for (int j = 1; j < Y + 1; j++)
+                {
+                    t.table[i, j] = W[(("K" + (j)).ToString(), i-1)].ToString();
+                }
+            }
+            for (int i = 0; i < X; i++)
+            {
+                t.table[i + 1, Y + 1] = Wa[i].ToString();
+            }
+
+            // Оформление таблицы
+            for (int i = 0; i < t.GetX(); i++)
+                for (int j = 0; j < t.GetY(); j++)
+                    t.style[i, j] = "1C1";
+            t.lineSeparators = new int[] { 0, X, X+1 };
 
             // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
             t.UpdateInfo();
@@ -236,39 +333,93 @@ namespace PR3
                     // Метод МАИ
                     case "MAI":
                         Console.WriteLine("МЕТОД МАИ");
-                        int X = Ms["T"].GetLength(0);
-                        Dictionary<(string, int), float> V = new Dictionary<(string, int), float>();
-                        Dictionary<(string, int), float> W = new Dictionary<(string, int), float>();
-                        Dictionary<string, float> SV = new Dictionary<string, float>();
                         List<string> objs = new List<string>();
                         objs.Add("T");
-                        Enumerable.Range(1, 5).ToList().ForEach(x => objs.Add("K" + x.ToString()));
+                        Enumerable.Range(1, Ks.Count()).ToList().ForEach(x => objs.Add("K" + x.ToString()));
                         Console.WriteLine("1. СИНТЕЗ ПРИОРИТЕТОВ");
+                        Dictionary<(string, int), float> V = new Dictionary<(string, int), float>();
+                        Dictionary<string, float> SV = new Dictionary<string, float>();
+                        Dictionary<(string, int), float> W = new Dictionary<(string, int), float>();
                         foreach (string obj in objs)
                         {
+                            int n = Ms[obj].GetLength(0);
+
                             SV[obj] = 0f;
-                            for (int i = 0; i < X; i++)
+                            for (int i = 0; i < n; i++)
                             {
                                 V[(obj, i)] = 1f;
-                                for (int j = 0; j < X; j++)
-                                {
+                                for (int j = 0; j < n; j++)
                                     V[(obj, i)] *= Ms[obj][i, j];
-                                }
-                                V[(obj, i)] = (float)Math.Pow(V[(obj, i)], 1f / X);
+                                V[(obj, i)] = (float)Math.Pow(V[(obj, i)], 1f / n);
                                 SV[obj] += V[(obj, i)];
                             }
-                            Console.WriteLine(String.Join(", ", V.Where(x => x.Key.Item1 == obj).Select(x => x.Value)));
-                            Console.WriteLine(SV[obj]);
-                            for (int i = 0; i < X; i++)
-                            {
+                            //Console.WriteLine(String.Join(", ", V.Where(x => x.Key.Item1 == obj).Select(x => x.Value)));
+                            //Console.WriteLine(SV[obj]);
+                            for (int i = 0; i < n; i++)
                                 W[(obj, i)] = V[(obj, i)] / SV[obj];
+                            //Console.WriteLine(String.Join(", ", W.Where(x => x.Key.Item1 == obj).Select(x => x.Value)));
+                            ShowTable(obj, Ms[obj], V, SV, W);
+                        }
+                        Console.WriteLine("2. СОГЛАСОВАННОСТЬ ЛОКАЛЬНЫХ ПРИОРИТЕТОВ");
+                        Dictionary<(string, int), float> S = new Dictionary<(string, int), float>();
+                        Dictionary<(string, int), float> P = new Dictionary<(string, int), float>();
+                        Dictionary<string, float> lambdaMax = new Dictionary<string, float>();
+                        Dictionary<string, float> IS = new Dictionary<string, float>();
+                        Dictionary<string, float> OS = new Dictionary<string, float>();
+                        foreach (string obj in objs)
+                        {
+                            int n = Ms[obj].GetLength(0);
+
+                            for (int j = 0; j < n; j++)
+                            {
+                                S[(obj, j)] = 0f;
+                                Fraction s = new Fraction { N = 0, D = 1 };
+                                for (int i = 0; i < n; i++)
+                                {
+                                    s += Ms[obj][i, j];
+                                }
+                                S[(obj, j)] = s;
+                                P[(obj, j)] = S[(obj, j)] * W[(obj, j)];
                             }
-                            Console.WriteLine(String.Join(", ", W.Where(x => x.Key.Item1 == obj).Select(x => x.Value)));
+                            lambdaMax[obj] = 0f;
+                            for (int j = 0; j < n; j++)
+                            {
+                                lambdaMax[obj] += P[(obj, j)];
+                            }
+                            //Console.WriteLine("DDD: {0} / {1} / {2} / {3}", (lambdaMax[obj] - n), (n - 1), SI[n], (lambdaMax[obj] - n) / (n - 1) / SI[n]);
+                            IS[obj] = (lambdaMax[obj] - n) / (n - 1);
+                            OS[obj] = IS[obj] / SI[n];
+                            //Console.WriteLine("S: " + String.Join(", ", String.Join(", ", S.Where(x => x.Key.Item1 == obj).Select(x => x.Value))));
+                            //Console.WriteLine("P: " + String.Join(", ", String.Join(", ", P.Where(x => x.Key.Item1 == obj).Select(x => x.Value))));
+                            //Console.WriteLine("lambda: " + lambdaMax[obj]);
+                            //Console.WriteLine("IS: " + IS[obj]);
+                            //Console.WriteLine("SI: " + SI[n]);
+                            //Console.WriteLine("OS: " + OS[obj]);
+                            if (OS[obj] <= 0.10f)
+                                Console.WriteLine("Матрица {0}: ОС = {1} <= 0.10 => Оценки эксперта согласованы.", obj, OS[obj]);
+                            else
+                                Console.WriteLine("Матрица {0}: ОС = {1}  > 0.10 => Оценки эксперта НЕ согласованы.", obj, OS[obj]);
+
                             Console.WriteLine();
                         }
+                        Console.WriteLine("3. ГЛОБАЛЬНЫЕ ПРИОРИТЕТЫ");
+                        Dictionary<int, float> Wa = new Dictionary<int, float>();
+                        for(int i = 0; i < As.Count; i++)
+                        {
+                            Wa[i] = 0f;
+                            for(int j = 0; j < Ks.Count; j++)
+                            {
+                                Wa[i] += W[("K" + (j + 1), i)] * W[("T", j)];
+                            }
+                        }
+                        ShowTable(As, Ks, W, Wa);
                         Console.WriteLine();
-                        break;
+                        Console.WriteLine("4. ОТВЕТ");
+                        string answer = String.Join(", ", Wa.Where(x => x.Value == Wa.Select(y => y.Value).Max()).Select(z => ("A" + (z.Key+1))));
+                        Console.WriteLine("Согласно МАИ предпочтение следует отдать: {{ {0} }}", answer);
+                        Console.WriteLine();
 
+                        break;
                     default:
                         // Входные Матрицы
                         if (c.StartsWith("IN"))

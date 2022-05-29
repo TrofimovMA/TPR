@@ -161,6 +161,17 @@ namespace Library
             }
         }
 
+        //НОД (Алгоритм Евклида)
+        public static int GetCommonDivisor(int i, int j)
+        {
+            i = Math.Abs(i);
+            j = Math.Abs(j);
+            while (i != j)
+                if (i > j) { i -= j; }
+                else { j -= i; }
+            return i;
+        }
+
         // Методы Расширения
         public static string ApplyAlign(this string s, int align, int width)
         {
@@ -222,6 +233,8 @@ namespace Library
         }
         public static int GetMaxLength(this string[] array)
         {
+            if (array.Count() < 1)
+                return 0;
             return array.Select(x => x.Length).Max();
         }
         public static float InterParseFloat(this string a)
