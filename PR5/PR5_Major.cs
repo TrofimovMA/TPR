@@ -18,12 +18,12 @@ namespace PR5
         // - Главный Класс
         public class Simplex
         {
-            //source - симплекс таблица без базисных переменных
-            double[,] table; //симплекс таблица
+            // source - симплекс таблица без базисных переменных
+            double[,] table; // симплекс таблица
 
             int m, n;
 
-            List<int> basis; //список базисных переменных
+            List<int> basis; // список базисных переменных
 
             public Simplex(double[,] source)
             {
@@ -41,7 +41,7 @@ namespace PR5
                         else
                             table[i, j] = 0;
                     }
-                    //выставляем коэффициент 1 перед базисной переменной в строке
+                    // выставляем коэффициент 1 перед базисной переменной в строке
                     if ((n + i) < table.GetLength(1))
                     {
                         table[i, n + i] = 1;
@@ -52,10 +52,10 @@ namespace PR5
                 n = table.GetLength(1);
             }
 
-            //result - в этот массив будут записаны полученные значения X
+            // result - в этот массив будут записаны полученные значения X
             public double[,] Calculate(double[] result)
             {
-                int mainCol, mainRow; //ведущие столбец и строка
+                int mainCol, mainRow; // ведущие столбец и строка
 
                 while (!IsItEnd())
                 {
@@ -79,7 +79,7 @@ namespace PR5
                     table = new_table;
                 }
 
-                //заносим в result найденные значения X
+                // заносим в result найденные значения X
                 for (int i = 0; i < result.Length; i++)
                 {
                     int k = basis.IndexOf(i + 1);
