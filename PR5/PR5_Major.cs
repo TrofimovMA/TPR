@@ -55,12 +55,23 @@ namespace PR5
             public double[,] Calculate(double[] result)
             {
                 int mainCol, mainRow; // ведущие столбец и строка
+                int c = 0; // счетчик итераций
 
                 while (!IsItEnd())
                 {
                     mainCol = findMainCol();
                     mainRow = findMainRow(mainCol);
                     basis[mainRow] = mainCol;
+
+                    // Промежуточная симплекс-таблица
+                    Console.WriteLine();
+                    Console.WriteLine("Промежуточная симплекс-таблица ({0}-я итерация)", ++c);
+                    for (int i = 0; i < table.GetLength(0); i++)
+                    {
+                        for (int j = 0; j < table.GetLength(1); j++)
+                            Console.Write(Math.Round(table[i, j], 3) + " ");
+                        Console.WriteLine();
+                    }
 
                     double[,] new_table = new double[m, n];
 
@@ -75,6 +86,7 @@ namespace PR5
                         for (int j = 0; j < n; j++)
                             new_table[i, j] = table[i, j] - table[i, mainCol] * new_table[mainRow, j];
                     }
+
                     table = new_table;
                 }
 
