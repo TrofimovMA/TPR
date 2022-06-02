@@ -58,7 +58,7 @@ namespace PR2
             }
         }
 
-        // Метод ЭЛЕКТРА
+        // Метод ЭЛЕКТРА-2
         // - Главная Функция
         // ( Составление матрицы предпочтений проектов )
         static Dictionary<int, int[]> Elektra(List<A> As, List<K> Ks, out string[,] infoPreferences, out string graphVizStr, float threshold = 1f)
@@ -140,7 +140,7 @@ namespace PR2
             return levels;
         }
 
-        // Метод ЭЛЕКТРА
+        // Метод ЭЛЕКТРА-2
         // - Возможные Исключения
         // -- Полученный граф содержит петли
         public class GraphIsLoopedException : Exception

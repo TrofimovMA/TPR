@@ -93,7 +93,7 @@ namespace PR2
             CurAs = new List<A>(As);
         }
 
-        // Таблица - информация о Критериях
+        // Таблица - Критерии для Оценки Проектов
         static void ShowTableK(List<K> Ks)
         {
             // Создание таблицы
@@ -143,7 +143,7 @@ namespace PR2
             t.PrintTable();
         }
 
-        // Таблица - информация об оценках Альтернатив
+        // Таблица - Оценки Проектов по Критериям
         static void ShowTableAK(List<A> As, List<K> Ks)
         {
             // Создание таблицы
@@ -202,7 +202,7 @@ namespace PR2
             Console.WriteLine(t.GetTableLineSeparator(new int[] { 0 }));
         }
 
-        // Таблица - матрица предпочтений проектов, составленная методом ЭЛЕКТРА
+        // Таблица - Матрица Предпочтений Проектов, составленная методом ЭЛЕКТРА 2
         static void ShowTableP(string[,] infoPreferences)
         {
             // Создание таблицы
@@ -273,7 +273,7 @@ namespace PR2
                         Console.WriteLine();
                         break;
                     default:
-                        // Метод ЭЛЕКТРА 2
+                        // Метод ЭЛЕКТРА-2
                         if (c.StartsWith("ELEKTRA"))
                         {
                             float T;
@@ -281,8 +281,8 @@ namespace PR2
                                 T = 1f;
                             else
                                 T = p.InterParseFloat();
-                            Console.WriteLine("МЕТОД ЭЛЕКТРА (порог отбора предпочтений: T={0})", T);
-                            string[,] infoPreferences; // Матрица предпочтений проектов
+                            Console.WriteLine("МЕТОД ЭЛЕКТРА-2 (порог отбора предпочтений: T={0})", T);
+                            string[,] infoPreferences = null; // Матрица предпочтений проектов
                             try
                             {
                                 Dictionary<int, int[]> levels = Elektra(CurAs, Ks, out infoPreferences, out graphViz, T);
@@ -299,7 +299,9 @@ namespace PR2
                             }
                             catch (Exception e) when (e is GraphIsLoopedException || e is GraphIsNotConnectedException)
                             {
-                                Console.WriteLine("Решение не получено: {0}", e.Message);
+                                Console.WriteLine("Полная матрица предпочтений проектов:");
+                                ShowTableP(infoPreferences);
+                                Console.WriteLine("Решение не получено: {0}.", e.Message);
                             }
                             Console.WriteLine();
                         }

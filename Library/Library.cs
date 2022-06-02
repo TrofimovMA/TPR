@@ -241,5 +241,9 @@ namespace Library
         {
             return float.Parse(a, NumberStyles.Any, CultureInfo.InvariantCulture);
         }
+        public static string ToString(this float f, int digits)
+        {
+            return ((float)Math.Round(f, digits)).ToString();
+        }
     }
 }

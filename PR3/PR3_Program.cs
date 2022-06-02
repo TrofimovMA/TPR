@@ -13,18 +13,8 @@ namespace PR3
     {
         static readonly string inputFile = Directory.GetCurrentDirectory() + @"\PR3.txt"; // Входной Файл
 
-        static string Target = String.Empty; // Цель
-        static readonly Dictionary<string, string> Scale = new Dictionary<string, string>(); // Шкала отн. важности
-        static readonly Dictionary<int, float> SI = new Dictionary<int, float>()
-            { { 1, 0f }, { 2, 0f }, { 3, 0.58f }, {4, 0.9f }, {5, 1.12f },
-            {6, 1.24f }, {7, 1.32f }, {8, 1.41f }, {9, 1.45f }, {10, 1.49f },
-            {11, 1.51f }, {12, 1.48f }, {13, 1.56f }, {14, 1.57f }, {15, 1.59f } }; // Индекс Случайной Согласованности
-        static readonly List<K> Ks = new List<K>(); // Список Критериев
-        static readonly List<A> As = new List<A>(); // Список Альтернатив
-        static readonly Dictionary<string, Fraction[,]> Ms = new Dictionary<string, Fraction[,]>();
-
         static readonly List<string> Commands = new List<string>(); // Последовательность Команд Программы
-        static List<A> CurAs = new List<A>(); // Список рассматриваемых Альтернатив
+        static int cmdCount; // Номер текущей команды
 
         // Загрузка Входных Данных
         static void LoadInputData()
@@ -62,9 +52,6 @@ namespace PR3
                         break;
                 }
             }
-            //Scale.ToList().ForEach(x => Console.WriteLine(x.Key + "->" + String.Join(", ", x.Value)));
-            //As.ToList().ForEach(x => Console.WriteLine(x));
-            //Ks.ToList().ForEach(x => Console.WriteLine(x));
             // - Обработка заданных Матриц
             regex = new Regex(@"(?<id>\w+)\s*>\s*M\((?<pars>\s*(?<par>.*?)\s*(,\s*(?<par>.*?)\s*)*)\)");
             foreach (Match m in regex.Matches(inputStr))
@@ -72,17 +59,11 @@ namespace PR3
                 string id = m.Groups["id"].Value;
                 string pars = m.Groups["pars"].Value;
                 List<string> par = new List<string>(m.Groups["par"].Captures.Cast<Capture>().Select(x => x.Value));
-                //Console.WriteLine(String.Join(", ", par));
-                //Console.WriteLine(String.Join(", ", par.Select(x => (Fraction)x)));
-                //Console.WriteLine(String.Join(", ", par.Select(x => ((Fraction)x).ToString(false))));
                 int size = (int)Math.Sqrt(par.Count);
                 Fraction[,] M = new Fraction[size, size];
                 for (int i = 0; i < par.Count; i++)
                     M[i / size, i % size] = (Fraction)par[i];
                 Ms.Add(id, M);
-                //Console.WriteLine(id);
-                //Console.WriteLine(pars);
-                //Console.WriteLine(String.Join(", ", par.ToList()));
             }
             // - Обработка Списка Команд
             regex = new Regex(@"S(\s*->\s*(?<cmd>\w+(?<pars>\(\S+\))?))+");
@@ -92,11 +73,9 @@ namespace PR3
                 foreach (Capture c in match.Groups["cmd"].Captures)
                     Commands.Add(c.Value);
             }
-
-            CurAs = new List<A>(As);
         }
 
-        // Таблица 1
+        // Таблица - Матрица Парных Сравнений
         static void ShowInputTable(string obj, Fraction[,] M)
         {
             int X = M.GetLength(0);
@@ -105,7 +84,6 @@ namespace PR3
 
             // Заполнение таблицы
             int row, col;
-            string str = string.Empty;
             row = 0; col = 0;
             t.table[row, col] = obj;
             for (int i = 1; i < X + 1; i++)
@@ -118,7 +96,6 @@ namespace PR3
             for (int i = 0; i < t.GetX(); i++)
                 for (int j = 0; j < t.GetY(); j++)
                     t.style[i, j] = "1C1";
-            //t.lineSeparators = Enumerable.Range(0, t.GetX()).ToArray();
 
             // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
             t.UpdateInfo();
@@ -127,7 +104,7 @@ namespace PR3
             t.PrintTable();
         }
 
-        // Таблица 2
+        // Таблица - Вычислением Вектора Локальных Приоритетов
         static void ShowTable(string obj, Fraction[,] M, Dictionary<(string, int), float> V, Dictionary<string, float> SV, Dictionary<(string, int), float> W)
         {
             int X = M.GetLength(0);
@@ -136,7 +113,6 @@ namespace PR3
 
             // Заполнение таблицы
             int row, col;
-            string str = string.Empty;
             row = 0; col = 0;
             t.table[row, col] = obj;
             for (int i = 1; i < X + 1; i++)
@@ -158,7 +134,6 @@ namespace PR3
             for (int i = 0; i < t.GetX(); i++)
                 for (int j = 0; j < t.GetY(); j++)
                     t.style[i, j] = "1C1";
-            //t.lineSeparators = Enumerable.Range(0, t.GetX()).ToArray();
 
             // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
             t.UpdateInfo();
@@ -175,7 +150,7 @@ namespace PR3
             Console.WriteLine(t.GetTableLineSeparator(new int[] { 0 }));
         }
 
-        // Таблица 3
+        // Таблица - Вычисление Вектора Глобальных Приоритетов
         static void ShowTable(List<A> As, List<K> Ks, Dictionary<(string, int), float> W, Dictionary<int, float> Wa)
         {
             int X = As.Count;
@@ -185,26 +160,25 @@ namespace PR3
 
             // Заполнение таблицы
             int row, col;
-            string str = string.Empty;
             row = 0; col = 0;
             t.table[row, col] = "";
             for (int i = 0; i < X; i++)
                 t.table[i+1, col] = As[i].name;
             for (int j = 0; j < Y; j++)
-                t.table[row, j+1] = Ks[j].name;
+                t.table[row, j+1] = Ks[j].name.ToMultiline();
             t.table[row, Y + 1] = String.Format("Глобальный\nПриоритет\nW[i]");
             for (int j = 0; j < Y; j++)
-                t.table[X + 1, j + 1] = W[("T", j)].ToString();
+                t.table[X + 1, j + 1] = W[("T", j)].ToString(3);
             for (int i = 1; i < X + 1; i++)
             {
                 for (int j = 1; j < Y + 1; j++)
                 {
-                    t.table[i, j] = W[(("K" + (j)).ToString(), i-1)].ToString();
+                    t.table[i, j] = W[(("K" + (j)).ToString(), i-1)].ToString(3);
                 }
             }
             for (int i = 0; i < X; i++)
             {
-                t.table[i + 1, Y + 1] = Wa[i].ToString();
+                t.table[i + 1, Y + 1] = Wa[i].ToString(3);
             }
 
             // Оформление таблицы
@@ -228,7 +202,7 @@ namespace PR3
             LoadInputData();
 
             // Выполнение Инструкции = Результат Программы = Выходные Данные
-            int cmdCount = 0;
+            cmdCount = 0;
             foreach (string c in Commands)
             {
                 string p = String.Empty;
@@ -239,99 +213,15 @@ namespace PR3
                 {
                     // Метод МАИ
                     case "MAI":
-                        Console.WriteLine("МЕТОД МАИ");
-                        List<string> objs = new List<string>();
-                        objs.Add("T");
-                        Enumerable.Range(1, Ks.Count()).ToList().ForEach(x => objs.Add("K" + x.ToString()));
-                        Console.WriteLine("1. СИНТЕЗ ПРИОРИТЕТОВ");
-                        Dictionary<(string, int), float> V = new Dictionary<(string, int), float>();
-                        Dictionary<string, float> SV = new Dictionary<string, float>();
-                        Dictionary<(string, int), float> W = new Dictionary<(string, int), float>();
-                        foreach (string obj in objs)
-                        {
-                            int n = Ms[obj].GetLength(0);
-
-                            SV[obj] = 0f;
-                            for (int i = 0; i < n; i++)
-                            {
-                                V[(obj, i)] = 1f;
-                                for (int j = 0; j < n; j++)
-                                    V[(obj, i)] *= Ms[obj][i, j];
-                                V[(obj, i)] = (float)Math.Pow(V[(obj, i)], 1f / n);
-                                SV[obj] += V[(obj, i)];
-                            }
-                            //Console.WriteLine(String.Join(", ", V.Where(x => x.Key.Item1 == obj).Select(x => x.Value)));
-                            //Console.WriteLine(SV[obj]);
-                            for (int i = 0; i < n; i++)
-                                W[(obj, i)] = V[(obj, i)] / SV[obj];
-                            //Console.WriteLine(String.Join(", ", W.Where(x => x.Key.Item1 == obj).Select(x => x.Value)));
-                            ShowTable(obj, Ms[obj], V, SV, W);
-                        }
-                        Console.WriteLine("2. СОГЛАСОВАННОСТЬ ЛОКАЛЬНЫХ ПРИОРИТЕТОВ");
-                        Dictionary<(string, int), float> S = new Dictionary<(string, int), float>();
-                        Dictionary<(string, int), float> P = new Dictionary<(string, int), float>();
-                        Dictionary<string, float> lambdaMax = new Dictionary<string, float>();
-                        Dictionary<string, float> IS = new Dictionary<string, float>();
-                        Dictionary<string, float> OS = new Dictionary<string, float>();
-                        foreach (string obj in objs)
-                        {
-                            int n = Ms[obj].GetLength(0);
-
-                            for (int j = 0; j < n; j++)
-                            {
-                                S[(obj, j)] = 0f;
-                                Fraction s = new Fraction { N = 0, D = 1 };
-                                for (int i = 0; i < n; i++)
-                                {
-                                    s += Ms[obj][i, j];
-                                }
-                                S[(obj, j)] = s;
-                                P[(obj, j)] = S[(obj, j)] * W[(obj, j)];
-                            }
-                            lambdaMax[obj] = 0f;
-                            for (int j = 0; j < n; j++)
-                            {
-                                lambdaMax[obj] += P[(obj, j)];
-                            }
-                            //Console.WriteLine("DDD: {0} / {1} / {2} / {3}", (lambdaMax[obj] - n), (n - 1), SI[n], (lambdaMax[obj] - n) / (n - 1) / SI[n]);
-                            IS[obj] = (lambdaMax[obj] - n) / (n - 1);
-                            OS[obj] = IS[obj] / SI[n];
-                            //Console.WriteLine("S: " + String.Join(", ", String.Join(", ", S.Where(x => x.Key.Item1 == obj).Select(x => x.Value))));
-                            //Console.WriteLine("P: " + String.Join(", ", String.Join(", ", P.Where(x => x.Key.Item1 == obj).Select(x => x.Value))));
-                            //Console.WriteLine("lambda: " + lambdaMax[obj]);
-                            //Console.WriteLine("IS: " + IS[obj]);
-                            //Console.WriteLine("SI: " + SI[n]);
-                            //Console.WriteLine("OS: " + OS[obj]);
-                            if (OS[obj] <= 0.10f)
-                                Console.WriteLine("Матрица {0}: ОС = {1} <= 0.10 => Оценки эксперта согласованы.", obj, OS[obj]);
-                            else
-                                Console.WriteLine("Матрица {0}: ОС = {1}  > 0.10 => Оценки эксперта НЕ согласованы.", obj, OS[obj]);
-
-                            Console.WriteLine();
-                        }
-                        Console.WriteLine("3. ГЛОБАЛЬНЫЕ ПРИОРИТЕТЫ");
-                        Dictionary<int, float> Wa = new Dictionary<int, float>();
-                        for(int i = 0; i < As.Count; i++)
-                        {
-                            Wa[i] = 0f;
-                            for(int j = 0; j < Ks.Count; j++)
-                            {
-                                Wa[i] += W[("K" + (j + 1), i)] * W[("T", j)];
-                            }
-                        }
-                        ShowTable(As, Ks, W, Wa);
-                        Console.WriteLine();
-                        Console.WriteLine("4. ОТВЕТ");
-                        string answer = String.Join(", ", Wa.Where(x => x.Value == Wa.Select(y => y.Value).Max()).Select(z => ("A" + (z.Key+1))));
-                        Console.WriteLine("Согласно МАИ предпочтение следует отдать: {{ {0} }}", answer);
+                        MAI();
                         Console.WriteLine();
 
                         break;
                     default:
-                        // Входные Матрицы
+                        // Входные Матрицы (Матрицы Парных Сравнений)
                         if (c.StartsWith("IN"))
                         {
-                            Console.WriteLine("ТАБЛИЦА");
+                            Console.WriteLine("МАТРИЦА ПАРНЫХ СРАВНЕНИЙ ДЛЯ ЭЛЕМЕНТА «{0}»", p);
                             ShowInputTable(p, Ms[p]);
                             Console.WriteLine();
                         }

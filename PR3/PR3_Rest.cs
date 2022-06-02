@@ -19,7 +19,7 @@ namespace PR3
             MainProgram();
 
             // Не закрывать окно консоли автоматически по завершении Программы
-            Console.ReadKey();
+            Console.ReadLine();
         }
 
         // Дробь

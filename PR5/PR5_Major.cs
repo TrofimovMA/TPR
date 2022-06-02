@@ -22,7 +22,6 @@ namespace PR5
             double[,] table; // симплекс таблица
 
             int m, n;
-
             List<int> basis; // список базисных переменных
 
             public Simplex(double[,] source)
