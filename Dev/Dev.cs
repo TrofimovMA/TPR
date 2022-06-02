@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace Dev
 {
-    internal static class Dev
+internal static class Dev
     {
         static readonly string inputFile = @"G:\VSProjects\TPR\PR2\PR2.txt"; // Входной Файл
 

@@ -69,7 +69,7 @@ namespace PR5
                     for (int i = 0; i < table.GetLength(0); i++)
                     {
                         for (int j = 0; j < table.GetLength(1); j++)
-                            Console.Write(Math.Round(table[i, j], 3) + " ");
+                            Console.Write(Math.Round(table[i, j], 5) + " ");
                         Console.WriteLine();
                     }
 

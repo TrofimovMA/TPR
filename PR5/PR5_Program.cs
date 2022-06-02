@@ -16,7 +16,7 @@ namespace PR5
         static readonly List<string> Commands = new List<string>(); // Последовательность Команд Программы
 
         static int size;
-        static List<Dictionary<string, int>> list = new List<Dictionary<string, int>>();
+        static List<Dictionary<string, float>> list = new List<Dictionary<string, float>>();
 
         // Загрузка Входных Данных
         static void LoadInputData()
@@ -36,35 +36,31 @@ namespace PR5
             regex = new Regex(@"^f\(x\)=(?<var>((\+|-)?\d*x\d+))+->max$", RegexOptions.Multiline);
             foreach (Match m in regex.Matches(inputStr))
             {
-                //Console.WriteLine("DEBUG: " + m.Value);
                 List<string> var = new List<string>(m.Groups["var"].Captures.Cast<Capture>().Select(x => x.Value));
                 size = var.Count();
-                list = new List<Dictionary<string, int>>();
-                Dictionary<string, int> dict = new Dictionary<string, int>();
+                list = new List<Dictionary<string, float>>();
+                Dictionary<string, float> dict = new Dictionary<string, float>();
                 var.ForEach(x =>
                 {
                     string f = x.Substring(x.IndexOf("x"), x.Length - x.IndexOf("x"));
-                    int s = -1*int.Parse(x.Substring(0, x.IndexOf("x")));
+                    float s = -1*float.Parse(x.Substring(0, x.IndexOf("x")));
                     dict.Add(f, s);
-                    //Console.WriteLine("{0} vs {1}", f, s);
-                    //Console.WriteLine(x);
                 });
                 list.Add(dict);
             }
             // - Обработка Ограничений
-            regex = new Regex(@"(?<var>((\+|-)?\d*x\d+))+<=(?<num>\d+)$", RegexOptions.Multiline);
+            regex = new Regex(@"(?<var>((\+|-)?(\d|\.)*x\d+))+<=(?<num>(\d|\.)+)$", RegexOptions.Multiline);
             foreach (Match m in regex.Matches(inputStr))
             {
-                //Console.WriteLine("DEBUG 222: " + m.Value);
                 List<string> var = new List<string>(m.Groups["var"].Captures.Cast<Capture>().Select(x => x.Value));
-                Dictionary<string, int> dict = new Dictionary<string, int>();
+                Dictionary<string, float> dict = new Dictionary<string, float>();
                 var.ForEach(x =>
                 {
                     string nx = x;
                     if (nx[0] == 'x')
                         nx = "1" + nx;
                     string f = nx.Substring(nx.IndexOf("x"), nx.Length - nx.IndexOf("x"));
-                    int s = int.Parse(nx.Substring(0, nx.IndexOf("x")));
+                    float s = float.Parse(nx.Substring(0, nx.IndexOf("x")));
                     dict.Add(f, s);
                 });
                 dict.Add("N", int.Parse(m.Groups["num"].Value));
@@ -99,7 +95,7 @@ namespace PR5
                         Console.WriteLine("СИМПЛЕКСНЫЙ МЕТОД");
 
                         double[,] table = new double[list.Count, size + 1];
-                        Dictionary<string, int> t;
+                        Dictionary<string, float> t;
                         t = list[0];
                         list.RemoveAt(0);
                         list.Add(t);
@@ -117,16 +113,6 @@ namespace PR5
                                 table[i, j] = 0;
                         }
 
-                        /*
-                        Console.WriteLine("Исходная симплекс-таблица:");
-                        for (int i = 0; i < table.GetLength(0); i++)
-                        {
-                            for (int j = 0; j < table.GetLength(1); j++)
-                                Console.Write(table[i, j] + " ");
-                            Console.WriteLine();
-                        }
-                        */
-
                         double[] result = new double[2];
                         double[,] table_result;
                         Simplex S = new Simplex(table);
@@ -137,7 +123,7 @@ namespace PR5
                         for (int i = 0; i < table_result.GetLength(0); i++)
                         {
                             for (int j = 0; j < table_result.GetLength(1); j++)
-                                Console.Write(Math.Round(table_result[i, j], 3) + " ");
+                                Console.Write(Math.Round(table_result[i, j], 5) + " ");
                             Console.WriteLine();
                         }
 
