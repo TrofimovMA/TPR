@@ -15,20 +15,21 @@ namespace PR5
     {
 
         // Симплексный Метод
-        // - Главный Класс
+        // - Главный Класс,
+        // через который осуществляется все работа с Симплекс-Методом
         public class Simplex
         {
-            // source - симплекс таблица без базисных переменных
-            double[,] table; // симплекс таблица
+            // double[,] source - симплекс-таблица (без базисных переменных)
+            double[,] table; // симплекс-таблица
 
-            int m, n;
+            int m, n; // исходная размерность
             List<int> basis; // список базисных переменных
 
             public Simplex(double[,] source)
             {
                 m = source.GetLength(0);
                 n = source.GetLength(1);
-                table = new double[m, n + m - 1];
+                table = new double[m, n + m - 1]; 
                 basis = new List<int>();
 
                 for (int i = 0; i < m; i++)

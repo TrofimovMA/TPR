@@ -15,7 +15,9 @@ namespace PR5
 
         static readonly List<string> Commands = new List<string>(); // Последовательность Команд Программы
 
+        // Кол-во переменных Целевой Функции
         static int size;
+        // Коэффициенты при Xi для каждой строки симплекс-таблицы
         static List<Dictionary<string, float>> list = new List<Dictionary<string, float>>();
 
         // Загрузка Входных Данных
@@ -31,11 +33,11 @@ namespace PR5
             inputStr = regex.Replace(inputStr, "$1");
             // - Удаление пробелов
             inputStr = Regex.Replace(inputStr, @"(\t| )", "", RegexOptions.Multiline);
-            //Console.WriteLine(inputStr);
-            // - Обработка Главной Функции
+            // - Обработка Целевой Функции
             regex = new Regex(@"^f\(x\)=(?<var>((\+|-)?\d*x\d+))+->max$", RegexOptions.Multiline);
             foreach (Match m in regex.Matches(inputStr))
             {
+                // List<string> var - список переменных Целевой Функции
                 List<string> var = new List<string>(m.Groups["var"].Captures.Cast<Capture>().Select(x => x.Value));
                 size = var.Count();
                 list = new List<Dictionary<string, float>>();
