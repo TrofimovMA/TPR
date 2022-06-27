@@ -118,7 +118,7 @@ namespace PR7
         }
 
         // Таблица - Итерация Метода Потенциалов
-        static void ShowTablePotentialIteration(List<A> As, List<B> Bs, Dictionary<(A a, B b), float> C, float[,] T, float[] u, float[] v, List<(int x, int y)> path)
+        static void ShowTablePotentialPreIteration(List<A> As, List<B> Bs, Dictionary<(A a, B b), float> C, float[,] T, float[] u, float[] v, List<(int x, int y)> path)
         {
             // Создание таблицы
             Table t = new Table(As.Count + 2, Bs.Count + 2);
@@ -136,8 +136,13 @@ namespace PR7
                 row++; col = 0;
                 t.table[row, col++] = $"A{i + 1}\n(u{i + 1}={u[i]})";
                 for (int j = 0; j < Bs.Count; j++)
+                {
+                    if (path[0] == (i, j) || T[i, j] <= -1)
+                        t.table[row, col++] = $" * {C[(As[i], Bs[j])]}";
+                    else
                     t.table[row, col++] = $"{T[i, j]} * {C[(As[i], Bs[j])]}";
-             
+                }
+
                 t.table[row, col++] = $"{As[i].supply}";
             }
             row++; col = 0;
@@ -175,13 +180,68 @@ namespace PR7
                     movement = $"{(char)30}";
                 t.table[fullPath[k].x+1, fullPath[k].y+1] += $"\n{movement}";
             }
-            // - Расставление знаков +/-
+            // - Расставление знаков +/- и L
             for(int k= 0; k < path.Count - 1; k++)
             {
                 string sign;
                 sign = ((k + 1) % 2 == 1) ? "+" : "-";
+                if (k == 0)
+                    t.table[path[k].x + 1, path[k].y + 1] += " L";
                 t.table[path[k].x + 1, path[k].y + 1] += $" ({sign})\n";
             }
+
+            // Оформление таблицы
+            for (int j = 0; j < t.GetY(); j++)
+                t.style[0, j] = "1C1";
+            for (int i = 1; i < t.GetX(); i++)
+            {
+                t.style[i, 0] = "1C1";
+                for (int j = 1; j < t.GetY() - 1; j++)
+                    t.style[i, j] = "1C1";
+                t.style[i, t.GetY() - 1] = "1C1";
+            }
+            t.lineSeparators = Enumerable.Range(0, t.GetX()).ToArray();
+
+            // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
+            t.UpdateInfo();
+
+            // Вывод таблицы
+            t.PrintTable();
+        }
+
+        // Таблица - Итерация Метода Потенциалов
+        static void ShowTablePotentialPostIteration(List<A> As, List<B> Bs, Dictionary<(A a, B b), float> C, float[,] T, float[] u, float[] v)
+        {
+            // Создание таблицы
+            Table t = new Table(As.Count + 2, Bs.Count + 2);
+
+            // Заполнение таблицы
+            int row, col;
+            string str = string.Empty;
+            row = 0; col = 0;
+            t.table[row, col++] = "Пункты";
+            for (int i = 0; i < Bs.Count; i++)
+                t.table[row, col++] = $"B{i + 1}\n(v{i + 1}={v[i]})";
+            t.table[row, col++] = "Запасы";
+            for (int i = 0; i < As.Count; i++)
+            {
+                row++; col = 0;
+                t.table[row, col++] = $"A{i + 1}\n(u{i + 1}={u[i]})";
+                for (int j = 0; j < Bs.Count; j++)
+                {
+                    if (T[i, j] <= -1)
+                        t.table[row, col++] = $" * {C[(As[i], Bs[j])]}";
+                    else
+                        t.table[row, col++] = $"{T[i, j]} * {C[(As[i], Bs[j])]}";
+                }
+
+                t.table[row, col++] = $"{As[i].supply}";
+            }
+            row++; col = 0;
+            t.table[row, col++] = "Потребности";
+            for (int j = 0; j < Bs.Count; j++)
+                t.table[row, col++] = $"{Bs[j].need}";
+            t.table[row, col++] = $"{Bs.Select(x => x.need).Sum()}";
 
             // Оформление таблицы
             for (int j = 0; j < t.GetY(); j++)
@@ -309,6 +369,11 @@ namespace PR7
                     case "POTENTIAL":
                         Console.WriteLine("МЕТОД ПОТЕНЦИАЛОВ");
                         Ts = Potential(As, Bs, Cs, Ts);
+                        Console.WriteLine();
+                        break;
+                    // Метод Потенциалов
+                    case "OUT":
+                        Console.WriteLine("ИТОГОВЫЙ ПЛАН ПОСТАВОК");
                         ShowTableABCT(As, Bs, Cs, Ts);
                         Console.WriteLine("Итоговая стоимость перевозок = {0} (ед.)", GetTotalCost(Ts, Cs));
                         Console.WriteLine();

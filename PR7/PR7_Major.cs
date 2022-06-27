@@ -61,6 +61,9 @@ namespace PR7
 
             // Таблица Поставок
             float[,] t = new float[As.Count, Bs.Count];
+            for (int i = 0; i < As.Count; i++)
+                for (int j = 0; j < Bs.Count; j++)
+                    t[i, j] = -1;
 
             // Северо-Западный Угол
             int x = 0, y = 0;
@@ -108,6 +111,9 @@ namespace PR7
 
             // Таблица Поставок
             float[,] t = new float[As.Count, Bs.Count];
+            for (int i = 0; i < As.Count; i++)
+                for (int j = 0; j < Bs.Count; j++)
+                    t[i, j] = -1;
 
             // Заполнение ячеек Таблицы Поставок
             // Условие выхода из цикла: пока Запасы полностью не распределены (и, соответственно, Потребности не удовлетворены)
@@ -163,6 +169,9 @@ namespace PR7
 
             // Таблица Поставок
             float[,] t = new float[As.Count, Bs.Count];
+            for (int i = 0; i < As.Count; i++)
+                for (int j = 0; j < Bs.Count; j++)
+                    t[i, j] = -1;
             startTs.ToList().ForEach(x =>
             {
                 t[As.FindIndex(a => a == x.Key.a), Bs.FindIndex(b => b == x.Key.b)] = x.Value;
@@ -171,8 +180,14 @@ namespace PR7
             int ci = 0; // Счетчик Итераций
             float cost = GetTotalCost(startTs, Cs); // Цена Текущего Плана
 
+            Console.WriteLine();
+            Console.WriteLine("Начальный план: ");
+
+            // Итерации Метода Потенциалов
             while (1 > 0)
             {
+                Console.WriteLine($"f{ci++} = {cost}");
+
                 // I. Исследование Базисного Решения на Оптимальность
 
                 // I.1.
@@ -184,7 +199,7 @@ namespace PR7
                 List<string> vars = new List<string>();
                 for (int x = 0; x < As.Count; x++)
                     for (int y = 0; y < Bs.Count; y++)
-                        if (t[x, y] > 0) // Заполненная клетка
+                        if (t[x, y] > -1) // Заполненная клетка
                         {
                             equations.Add($"u{x + 1}+v{y + 1}={Cs[(As[x], Bs[y])]}");
                             if (!vars.Contains($"u{x + 1}"))
@@ -192,9 +207,7 @@ namespace PR7
                             if (!vars.Contains($"v{y + 1}"))
                                 vars.Add($"v{y + 1}");
                         }
-
-                Console.WriteLine("{0}", string.Join(", ", equations));
-                Console.WriteLine("START");
+                //Console.WriteLine("{0}", string.Join(", ", equations));
 
                 // I.1.2. Решение системы уравнений
                 Dictionary<string, float> answers = new Dictionary<string, float>();
@@ -231,8 +244,8 @@ namespace PR7
                                 equations.RemoveAt(i--);
                             }
 
-                            answers.ToList().ForEach(y => Console.Write("{0} -> {1} |", y.Key, y.Value));
-                            Console.WriteLine();
+                            //answers.ToList().ForEach(y => Console.Write("{0} -> {1} |", y.Key, y.Value));
+                            //Console.WriteLine();
                         }
                     }
                 }
@@ -248,7 +261,7 @@ namespace PR7
                 float[,] delta = new float[As.Count, Bs.Count];
                 for (int x = 0; x < As.Count; x++)
                     for (int y = 0; y < Bs.Count; y++)
-                        if (t[x, y] <= 0) // Свободная клетка
+                        if (t[x, y] <= -1) // Свободная клетка
                         {
                             delta[x, y] = Cs[(As[x], Bs[y])] - (u[x] + v[y]);
                             //Console.WriteLine($"D({x + 1},{y + 1}) = {delta[x, y]}");
@@ -258,13 +271,14 @@ namespace PR7
                 bool isOptimal = true;
                 for (int x = 0; x < As.Count; x++)
                     for (int y = 0; y < Bs.Count; y++)
-                        if (t[x, y] <= 0) // Свободная клетка
+                        if (t[x, y] <= -1) // Свободная клетка
                             if (delta[x, y] < 0.0)
                             {
                                 isOptimal = false;
                                 break;
                             }
-                Console.WriteLine("Проверка оптимальности: {0}", isOptimal);
+                Console.WriteLine("Проверка оптимальности: {0}", isOptimal ? "План оптимален" : "План НЕ оптимален");
+                Console.WriteLine();
                 if (isOptimal)
                     break;
 
@@ -274,13 +288,13 @@ namespace PR7
                 float minDelta = 0; (int x, int y) minDeltaCell = (0, 0);
                 for (int x = 0; x < As.Count; x++)
                     for (int y = 0; y < Bs.Count; y++)
-                        if (t[x, y] <= 0) // Свободная клетка
+                        if (t[x, y] <= -1) // Свободная клетка
                             if (delta[x, y] < minDelta)
                             {
                                 minDelta = delta[x, y];
                                 minDeltaCell.x = x; minDeltaCell.y = y;
                             }
-                Console.WriteLine("MinDelta = {0} ({1})", minDelta, minDeltaCell);
+                //Console.WriteLine("MinDelta = {0} ({1})", minDelta, minDeltaCell);
 
                 // II.2. Построение замкнутого цикла пересчета
                 List<List<(int x, int y)>> loops = GetLoops(t, minDeltaCell);
@@ -288,21 +302,32 @@ namespace PR7
 
                 // II.3. Определение Lambda
                 float lambda = path.Where((x, i) => i % 2 != 0).Select(x => t[x.x, x.y]).Min();
-                Console.WriteLine("lambda = {0}", lambda);
+                //Console.WriteLine("Lambda = {0}", lambda);
+                t[minDeltaCell.x, minDeltaCell.y] = lambda;
+
+                Console.WriteLine($"Итерация {ci}: ");
+                Console.WriteLine("До: ");
+                ShowTablePotentialPreIteration(As, Bs, Cs, t, u, v, path);
 
                 // II.4. Перенос Lambda единиц груза по означенному Циклу
                 path.Where((x, i) => i % 2 != 0).ToList().ForEach(x => t[x.x, x.y] -= lambda);
-                path.Where((x, i) => i % 2 == 0 && i != 0).ToList().ForEach(x => t[x.x, x.y] += lambda);
+                path.Where((x, i) => i % 2 == 0 && i != 0 && i != path.Count - 1).ToList().ForEach(x => t[x.x, x.y] += lambda);
 
-                // II.5. Определение стоимости перевозок по новому плану
+                // II.5. Объявление свободной переменной (только одна из равных нулю)
+                foreach(var x in path)
+                {
+                    if (t[x.x, x.y] > 0)
+                        continue;
+
+                    t[x.x, x.y] = -1;
+                    break;
+                }
+
+                Console.WriteLine("После: ");
+                ShowTablePotentialPostIteration(As, Bs, Cs, t, u, v);
+
+                // II.6. Определение стоимости перевозок по новому плану
                 cost = cost + minDelta * lambda;
-                Console.WriteLine("Новая стоимость: {0}", cost);
-
-                Console.WriteLine("Итерация: ");
-                ShowTablePotentialIteration(As, Bs, Cs, t, u, v, path);
-                Console.WriteLine();
-
-                Console.WriteLine("END");
             }
 
             // Представление Результата в типе данных «Словарь»
@@ -323,7 +348,7 @@ namespace PR7
 
             loops.ForEach(x =>
             {
-                Console.WriteLine("ANSWER: {0}", String.Join(", ", x.Select(y => (y.x + 1, y.y + 1))));
+                //Console.WriteLine("ANSWER: {0}", String.Join(", ", x.Select(y => (y.x + 1, y.y + 1))));
             });
 
             return loops;
