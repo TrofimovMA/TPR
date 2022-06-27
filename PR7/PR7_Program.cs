@@ -86,7 +86,10 @@ namespace PR7
                 row++; col = 0;
                 t.table[row, col++] = $"A{i + 1}";
                 for (int j = 0; j < Bs.Count; j++)
-                    t.table[row, col++] = $"{T[(As[i], Bs[j])]} * {C[(As[i], Bs[j])]}";
+                    if(T[(As[i], Bs[j])]>-1)
+                        t.table[row, col++] = $"{T[(As[i], Bs[j])]} * {C[(As[i], Bs[j])]}";
+                    else
+                        t.table[row, col++] = $" * {C[(As[i], Bs[j])]}";
                 t.table[row, col++] = $"{As[i].supply}";
             }
             row++; col = 0;
@@ -106,6 +109,91 @@ namespace PR7
                 t.style[i, t.GetY() - 1] = "1C1";
             }
             t.lineSeparators = new int[] { 0, t.GetX() - 2, t.GetX() - 1 };
+
+            // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
+            t.UpdateInfo();
+
+            // Вывод таблицы
+            t.PrintTable();
+        }
+
+        // Таблица - Итерация Метода Потенциалов
+        static void ShowTablePotentialIteration(List<A> As, List<B> Bs, Dictionary<(A a, B b), float> C, float[,] T, float[] u, float[] v, List<(int x, int y)> path)
+        {
+            // Создание таблицы
+            Table t = new Table(As.Count + 2, Bs.Count + 2);
+
+            // Заполнение таблицы
+            int row, col;
+            string str = string.Empty;
+            row = 0; col = 0;
+            t.table[row, col++] = "Пункты";
+            for (int i = 0; i < Bs.Count; i++)
+                t.table[row, col++] = $"B{i + 1}\n(v{i + 1}={v[i]})";
+            t.table[row, col++] = "Запасы";
+            for (int i = 0; i < As.Count; i++)
+            {
+                row++; col = 0;
+                t.table[row, col++] = $"A{i + 1}\n(u{i + 1}={u[i]})";
+                for (int j = 0; j < Bs.Count; j++)
+                    t.table[row, col++] = $"{T[i, j]} * {C[(As[i], Bs[j])]}";
+             
+                t.table[row, col++] = $"{As[i].supply}";
+            }
+            row++; col = 0;
+            t.table[row, col++] = "Потребности";
+            for (int j = 0; j < Bs.Count; j++)
+                t.table[row, col++] = $"{Bs[j].need}";
+            t.table[row, col++] = $"{Bs.Select(x => x.need).Sum()}";
+            // - Заполнение Пути
+            List<(int x, int y)> fullPath = new List<(int x, int y)>(path);
+            for (int k = 0; k < fullPath.Count - 1; k++)
+            {
+                (int x, int y) nextPoint = (fullPath[k].x, fullPath[k].y);
+                do
+                {
+                    nextPoint.x += (fullPath[k + 1].x > nextPoint.x) ? 1 : (fullPath[k + 1].x < nextPoint.x) ? -1 : 0;
+                    nextPoint.y += (fullPath[k + 1].y > nextPoint.y) ? 1 : (fullPath[k + 1].y < nextPoint.y) ? -1 : 0;
+                    if (nextPoint == fullPath[k + 1])
+                        break;
+                    fullPath.Insert(k++ + 1, nextPoint);
+                } while (1 > 0);
+            }
+            for (int k = 0; k < fullPath.Count - 1; k++)
+            {
+                int dx = fullPath[k + 1].y - fullPath[k].y;
+                int dy = fullPath[k + 1].x - fullPath[k].x;
+
+                string movement;
+                if (dx < 0)
+                    movement = $"{(char)17}";
+                else if (dx > 0)
+                    movement = $"{(char)16}";
+                else if(dy > 0)
+                    movement = $"{(char)31}";
+                else
+                    movement = $"{(char)30}";
+                t.table[fullPath[k].x+1, fullPath[k].y+1] += $"\n{movement}";
+            }
+            // - Расставление знаков +/-
+            for(int k= 0; k < path.Count - 1; k++)
+            {
+                string sign;
+                sign = ((k + 1) % 2 == 1) ? "+" : "-";
+                t.table[path[k].x + 1, path[k].y + 1] += $" ({sign})\n";
+            }
+
+            // Оформление таблицы
+            for (int j = 0; j < t.GetY(); j++)
+                t.style[0, j] = "1C1";
+            for (int i = 1; i < t.GetX(); i++)
+            {
+                t.style[i, 0] = "1C1";
+                for (int j = 1; j < t.GetY() - 1; j++)
+                    t.style[i, j] = "1C1";
+                t.style[i, t.GetY() - 1] = "1C1";
+            }
+            t.lineSeparators = Enumerable.Range(0, t.GetX()).ToArray();
 
             // Обновление характеристик таблицы, зависящих от ее содержимого, перед ее выводом
             t.UpdateInfo();
@@ -175,7 +263,7 @@ namespace PR7
             Ts.ToList().ForEach(x =>
             {
                 // Прибавление Стоимости Поставки = Кол-во Груза * Стоимость Доставки 1-ой Единицы Груза
-                sum += x.Value * Cs.ToList().Find(y => x.Key == y.Key).Value;
+                sum += (x.Value>-1? x.Value : 0) * Cs.ToList().Find(y => x.Key == y.Key).Value;
             });
 
             return sum;

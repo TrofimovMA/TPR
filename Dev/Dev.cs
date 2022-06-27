@@ -27,6 +27,11 @@ internal static class Dev
 
         static void Main(string[] args)
         {
+            for(int i=0; i<=255; i++)
+            {
+                Console.WriteLine($"{i}. {(char)i}");
+            }
+            Console.ReadKey();
             return;
             List<(int, int)> graph = new List<(int, int)>();
             graph.Add((1, 6));
