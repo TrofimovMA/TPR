@@ -354,7 +354,7 @@ namespace PR7
                         Console.WriteLine("МЕТОД СЕВЕРО-ЗАПАДНОГО УГЛА");
                         Ts = NW_Corner(As, Bs);
                         ShowTableABCT(As, Bs, Cs, Ts);
-                        Console.WriteLine("Итоговая стоимость перевозок = {0} (ед.)", GetTotalCost(Ts, Cs));
+                        Console.WriteLine("Итоговая стоимость перевозок = {0} (ден. ед.)", GetTotalCost(Ts, Cs));
                         Console.WriteLine();
                         break;
                     // Метод Минимальной Стоимости
@@ -362,7 +362,7 @@ namespace PR7
                         Console.WriteLine("МЕТОД МИНИМАЛЬНОЙ СТОИМОСТИ");
                         Ts = MinCost(As, Bs, Cs);
                         ShowTableABCT(As, Bs, Cs, Ts);
-                        Console.WriteLine("Итоговая стоимость перевозок = {0} (ед.)", GetTotalCost(Ts, Cs));
+                        Console.WriteLine("Итоговая стоимость перевозок = {0} (ден. ед.)", GetTotalCost(Ts, Cs));
                         Console.WriteLine();
                         break;
                     // Метод Потенциалов

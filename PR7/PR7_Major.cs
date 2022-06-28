@@ -7,9 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Library;
-
-using Table = Library.Lib.Table;
 
 namespace PR7
 {
@@ -186,7 +183,7 @@ namespace PR7
             // Итерации Метода Потенциалов
             while (1 > 0)
             {
-                Console.WriteLine($"f{ci++} = {cost}");
+                Console.WriteLine($"f{ci++} = {cost} (ден. ед.)");
 
                 // I. Исследование Базисного Решения на Оптимальность
 
@@ -264,7 +261,7 @@ namespace PR7
                         if (t[x, y] <= -1) // Свободная клетка
                         {
                             delta[x, y] = Cs[(As[x], Bs[y])] - (u[x] + v[y]);
-                            //Console.WriteLine($"D({x + 1},{y + 1}) = {delta[x, y]}");
+                            //Console.WriteLine($"D({x + 1},{y + 1}) = {Cs[(As[x], Bs[y])]} - ({u[x]} + {v[y]}) = {delta[x, y]}");
                         }
 
                 // I.3. Проверка выполнения условия оптимальности плана Dij >= 0
@@ -338,6 +335,8 @@ namespace PR7
             return Ts;
         }
 
+        // Поиск Циклов в Таблице
+        // - Главная функция
         static List<List<(int x, int y)>> GetLoops(float[,] t, (int x, int y) start)
         {
             List<List<(int x, int y)>> loops = new List<List<(int x, int y)>>();
@@ -353,7 +352,7 @@ namespace PR7
 
             return loops;
         }
-
+        // - Вспомогательная функция
         static void GetLoops_Sub(float[,] t, (int x, int y) nPoint, List<(int x, int y)> oPath, (int x, int y) endPoint, ref List<List<(int x, int y)>> loops)
         {
             int m = t.GetLength(0);
