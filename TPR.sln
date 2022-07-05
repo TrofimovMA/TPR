@@ -25,6 +25,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PR5", "PR5\PR5.csproj", "{1
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PR7", "PR7\PR7.csproj", "{AF9FCFBB-9B57-4D7E-8385-2439711246F5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PR4", "PR4", "{50DB5B44-E176-4594-85ED-622326FC953E}"
+	ProjectSection(SolutionItems) = preProject
+		PR4\PR4-Python.txt = PR4\PR4-Python.txt
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "PR6", "PR6", "{E0FBFB91-D6E6-4B03-89AE-DBD8B42D1D86}"
+	ProjectSection(SolutionItems) = preProject
+		PR6\PR6-Python.txt = PR6\PR6-Python.txt
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
